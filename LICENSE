@@ -11,13 +11,13 @@ any person obtaining a copy of this software and associated documentation files
 (the "Software") a perpetual, worldwide, non-exclusive, royalty-free, fully
 paid-up license to use, copy, modify, merge, adapt, and integrate the Software.
 
-2. PERMITTED COMMERCIAL AND PERSONAL USE
+2. PERMITTED COMMERCIAL AND PERSONAL USE (100% FREE)
 You ARE expressly permitted to:
 (a) Use this Software for personal, educational, research, and non-commercial
-    purposes without restriction.
+    purposes without restriction and with zero fees.
 (b) Use, modify, and integrate this Software into any commercial applications,
     closed-source products, SaaS platforms, internal engineering workflows,
-    client solutions, and enterprise systems.
+    client solutions, and enterprise systems without paying royalties or fees.
 (c) Freely deploy, distribute, and monetize any commercial application or product
     that incorporates or is built using this Software as an internal verification,
     testing, or engineering harness.
@@ -28,18 +28,25 @@ You are STRICTLY PROHIBITED from:
     monetizing this Software (or any substantially similar derivative work thereof)
     as a standalone commercial product, standalone paid template, standalone
     boilerplate, or standalone developer toolkit.
-(b) Offering the Software as a standalone commercial SaaS service or paid digital
-    download whose primary commercial value proposition consists of this harness,
-    its verification scripts, its agent rules, or its test infrastructure.
+(b) Offering the Software as a standalone commercial SaaS service, paid digital
+    download, or course asset whose primary commercial value proposition consists
+    of this harness, its verification scripts, agent skills, or test infrastructure.
 (c) Removing or altering any copyright notice, trademark, or license terms
     contained within the Software.
 
-4. REDISTRIBUTION AND ATTRIBUTION
+4. VOLUNTARY SPONSORSHIP (GOODWILL APPRECIATION)
+While the Software is completely free to use even in commercial products, if it has
+saved your engineering team time, prevented production outages, or improved your
+development velocity, voluntary sponsorship is warmly welcomed:
+  - GitHub Sponsors: https://github.com/sponsors/johnklayton2001-arch
+  - Direct contact: primeapps.info@gmail.com
+
+5. REDISTRIBUTION AND ATTRIBUTION
 Redistributions of the source code or modifications thereof must retain the above
 copyright notice, this list of conditions, and the following disclaimer in all
 copies or substantial portions of the Software.
 
-5. DISCLAIMER OF WARRANTY
+6. DISCLAIMER OF WARRANTY
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. IN NO EVENT SHALL
