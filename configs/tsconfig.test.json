@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "verbatimModuleSyntax": false,
+    "types": [
+      "vite/client",
+      "vitest/globals",
+      "node"
+    ],
+    "noCheck": false
+  },
+  "include": [
+    "src",
+    "src/**/__tests__/*",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "vitest.config.ts"
+  ],
+  "exclude": []
+}

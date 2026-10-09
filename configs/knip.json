@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/knip@5/overview/configuration-schema.json",
+  "entry": [
+    "index.html",
+    "src/main.tsx",
+    "src/pages/**/*.{ts,tsx}",
+    "src/**/index.ts",
+    "scripts/**/*.{js,mjs,ts}"
+  ],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignoreExportsUsedInFile": true
+}

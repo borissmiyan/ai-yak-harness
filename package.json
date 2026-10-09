@@ -1,0 +1,27 @@
+{
+  "name": "ai-yak-harness",
+  "version": "1.0.0",
+  "description": "Universal AI Engineering Harness Starter Kit — Deterministic verification, anti-tampering, resource hygiene, AST linting, and 8-tier safety gates for autonomous AI agents.",
+  "type": "module",
+  "bin": {
+    "ai-yak-harness": "./setup.mjs"
+  },
+  "scripts": {
+    "setup": "node setup.mjs"
+  },
+  "keywords": [
+    "ai-agent",
+    "harness",
+    "quality-gate",
+    "anti-tampering",
+    "diff-budget",
+    "vitest",
+    "playwright",
+    "stryker",
+    "cursor",
+    "claude-code",
+    "antigravity"
+  ],
+  "author": "Boris Smiyan <borissmiyan@gmail.com>",
+  "license": "SEE LICENSE IN LICENSE"
+}

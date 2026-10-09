@@ -1,0 +1,58 @@
+name: CI Quality Gate
+
+on:
+  push:
+    branches: [main, master, dev]
+  pull_request:
+    branches: [main, master, dev]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: TypeCheck, Lint & Full Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: 🛡️ Verify No Unsolicited Test Modifications
+        run: node scripts/verify-no-test-tampering.mjs
+        env:
+          CI: true
+
+      - name: 🛡️ Verify No Secrets Committed
+        run: node scripts/verify-no-secrets.mjs
+
+      - name: 🔄 Verify Zero Circular Dependencies
+        run: node scripts/verify-no-circular.mjs
+        env:
+          ALLOW_CIRCULAR: true
+
+      - name: 🧹 Verify Resource Hygiene & Memory Leaks
+        run: node scripts/verify-resource-hygiene.mjs
+
+      - name: ⚡ Verify Component Memoization
+        run: node scripts/verify-memoization.mjs
+
+      - name: 🔒 Verify Database Schema Drift
+        run: node scripts/verify-schema-drift.mjs
+
+      - name: 🛡️ Run Unified Quality Check (Types + Lint + Tests)
+        run: npm run check
+
+      - name: 📦 Production Build Verification
+        run: npm run build

@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+*.log
+.stryker-tmp/
+test-results/
+playwright-report/
+dist/

@@ -1,0 +1,49 @@
+Yak Free Commercial & Non-Standalone Resale License (Version 1.0)
+Copyright (c) 2026 Boris Smiyan / Yak Money (https://github.com/johnklayton2001-arch)
+
+================================================================================
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+================================================================================
+
+1. GRANT OF LICENSE
+Subject to the terms and conditions of this License, the Author hereby grants to
+any person obtaining a copy of this software and associated documentation files
+(the "Software") a perpetual, worldwide, non-exclusive, royalty-free, fully
+paid-up license to use, copy, modify, merge, adapt, and integrate the Software.
+
+2. PERMITTED COMMERCIAL AND PERSONAL USE
+You ARE expressly permitted to:
+(a) Use this Software for personal, educational, research, and non-commercial
+    purposes without restriction.
+(b) Use, modify, and integrate this Software into any commercial applications,
+    closed-source products, SaaS platforms, internal engineering workflows,
+    client solutions, and enterprise systems.
+(c) Freely deploy, distribute, and monetize any commercial application or product
+    that incorporates or is built using this Software as an internal verification,
+    testing, or engineering harness.
+
+3. EXPRESS RESTRICTIONS (NO STANDALONE RESALE)
+You are STRICTLY PROHIBITED from:
+(a) Selling, reselling, licensing, sublicensing, leasing, renting, or otherwise
+    monetizing this Software (or any substantially similar derivative work thereof)
+    as a standalone commercial product, standalone paid template, standalone
+    boilerplate, or standalone developer toolkit.
+(b) Offering the Software as a standalone commercial SaaS service or paid digital
+    download whose primary commercial value proposition consists of this harness,
+    its verification scripts, its agent rules, or its test infrastructure.
+(c) Removing or altering any copyright notice, trademark, or license terms
+    contained within the Software.
+
+4. REDISTRIBUTION AND ATTRIBUTION
+Redistributions of the source code or modifications thereof must retain the above
+copyright notice, this list of conditions, and the following disclaimer in all
+copies or substantial portions of the Software.
+
+5. DISCLAIMER OF WARRANTY
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND NON-INFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM,
+OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
