@@ -32,3 +32,5 @@
 | :--- | :--- | :--- | :--- | :--- |
 | `Badge` | `src/shared/ui/Badge.tsx` | `variant` (`success`, `warning`, `danger`, `info`) | stable | 2026-10-09 |
 | `Skeleton` | `src/shared/ui/Skeleton.tsx` | Content placeholder loading pulse | stable | 2026-10-09 |
+
+| `Card` | `src/shared/ui/Card.tsx` | Карточка контента с дизайн-токенами скруглений и бордеров | stable | 2026-10-09 |

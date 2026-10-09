@@ -7,7 +7,12 @@
     "ai-yak-harness": "./setup.mjs"
   },
   "scripts": {
-    "setup": "node setup.mjs"
+    "setup": "node setup.mjs",
+    "check:design": "node scripts/verify-design-system.mjs",
+    "check:design:fix": "node scripts/verify-design-system.mjs --fix",
+    "design:export-tokens": "node scripts/export-design-tokens.mjs",
+    "design:scaffold-ui": "node scripts/scaffold-ui-kit.mjs",
+    "design:showcase": "node scripts/generate-design-showcase.mjs"
   },
   "keywords": [
     "ai-agent",

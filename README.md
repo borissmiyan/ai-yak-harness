@@ -109,6 +109,10 @@ npm run prepare
 | `verify-diff-budget.mjs` | Ограничивает дифф до 450 строк и 10 файлов за коммит | `ALLOW_LARGE_DIFF=true` |
 | `verify-no-secrets.mjs` | Сканирует коммит на Supabase Service Keys, AWS/R2 ключи, приватные токены | Удалить секрет из диффа |
 | `verify-resource-hygiene.mjs` | Ищет утечки памяти (`createObjectURL` без `revoke`, `addEventListener`, таймеры) | `// @resource-hygiene-ignore: <причина>` |
+| `verify-design-system.mjs` | Hard Gate & Auto-Fixer: COMPONENTS.md, 96px TMA, WCAG 2.1 AA контраст, эмодзи (`--fix`) | `// @design-gate-ignore: <причина>` |
+| `export-design-tokens.mjs` | Token-to-Code: экспорт 9 стилей в Tailwind v4 `@theme` и TypeScript-токены | — |
+| `scaffold-ui-kit.mjs` | UI-Kit Scaffolder: генерация Button, Input, Badge, Card, SpringSheet со всеми 6 состояниями | — |
+| `generate-design-showcase.mjs` | Instant Showcase: генерация `design-showcase.html` с интерактивным тестером пружины | — |
 | `verify-memoization.mjs` | Контролирует `React.memo` на всех карточках и строках списков | `// @memo-gate-ignore: <причина>` |
 | `verify-no-circular.mjs` | Предотвращает циклические импорты и `undefined` при старте | `ALLOW_CIRCULAR=true` |
 | `verify-schema-drift.mjs` | Предотвращает несанкционированный дрейф контрактов БД и RPC типов | `ALLOW_SCHEMA_MUTATION=true` |

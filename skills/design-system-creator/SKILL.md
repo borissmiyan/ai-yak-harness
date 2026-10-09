@@ -121,3 +121,15 @@ triggers:
    - Запускает сканер кодовой базы `python scripts/scan_design_system.py`.
    - Находит новые или измененные компоненты и обновляет `COMPONENTS.md`.
    - Записывает изменения в Decision Log.
+
+---
+
+## 🛠️ CLI Инструменты Дизайн-Системы (`scripts/`)
+
+| Скрипт | Команда | Назначение |
+| :--- | :--- | :--- |
+| `verify-design-system.mjs` | `npm run check:design` | Hard Gate валидация: проверка COMPONENTS.md, 96px шапки TMA, запрет layout thrashing, WCAG контраст. |
+| `verify-design-system.mjs` | `npm run check:design:fix` | **Auto-Fixer:** автоматическая регистрация компонентов в COMPONENTS.md и замена сырых эмодзи на Lucide. |
+| `export-design-tokens.mjs` | `npm run design:export-tokens -- --style <name>` | **Token-to-Code:** экспорт выбранного стиля в `src/index.css` (Tailwind v4 @theme) и `tokens.ts`. |
+| `scaffold-ui-kit.mjs` | `npm run design:scaffold-ui` | **UI-Kit Scaffolder:** генерация 5 канонических примитивов (Button, Input, Badge, Card, SpringSheet) со всеми 6 состояниями. |
+| `generate-design-showcase.mjs` | `npm run design:showcase` | **Instant Showcase:** генерация автономного интерактивного `design-showcase.html` для мгновенного превью в браузере. |
