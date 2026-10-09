@@ -1,7 +1,7 @@
 # 🛡️ AI Yak Harness (Universal Standard)
 
-> **Автор:** Boris Smiyan / Yak Money ([GitHub](https://github.com/johnklayton2001-arch))  
-> **Живой эталон (Golden Reference):** [Father Work Database](file:///Users/borissmiyan/Work/AppDev/Father%20Work%20Database) (`johnklayton2001-arch/elconder_test_db`).  
+> **Автор:** Boris Smiyan / Yak Money ([GitHub](https://github.com/borissmiyan))  
+> **Живой эталон (Golden Reference):** [Father Work Database](file:///Users/borissmiyan/Work/AppDev/Father%20Work%20Database) (`borissmiyan/ai-yak-harness`).  
 > **Лицензия:** [YAK-FCU-1.0 (Yak Free Commercial & Non-Standalone Resale License)](./LICENSE) — Бесплатно для любых коммерческих приложений и SaaS, запрещена продажа в виде standalone-продукта.  
 > **Аксиома харнесса:** *«Промпт — рекомендация, Харнесс — детерминированный Hard Gate»*.
 
@@ -176,6 +176,6 @@ npm run prepare
 Если `ai-yak-harness` сберёг вашей команде десятки часов отладки, помог поймать критические утечки памяти или ускорил запуск вашего продукта — вы можете поддержать развитие проекта:
 
 * ⭐ **Поставьте звезду репозиторию** на GitHub (помогает алгоритмам и сообществу)
-* ☕ **[Поддержать на GitHub Sponsors](https://github.com/sponsors/johnklayton2001-arch)** — любая сумма на кофе или регулярная поддержка
+* ☕ **[Поддержать на GitHub Sponsors](https://github.com/sponsors/borissmiyan)** — любая сумма на кофе или регулярная поддержка
 * 📢 **Расскажите о проекте** в X (Twitter), LinkedIn или профильных сообществах
 * 💼 **Архитектурный консалтинг и внедрение:** обратная связь через `primeapps.info@gmail.com`

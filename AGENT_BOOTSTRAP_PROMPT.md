@@ -10,7 +10,7 @@
 
 ### 🌟 Центральный репозиторий и эталон:
 - **Центральный репозиторий харнесса:** `/Users/borissmiyan/Work/AppDev/ai-yak-harness`
-- **Живой эталон реализации (Golden Reference):** `/Users/borissmiyan/Work/AppDev/Father Work Database` (`johnklayton2001-arch/elconder_test_db`)
+- **Живой эталон реализации (Golden Reference):** `/Users/borissmiyan/Work/AppDev/Father Work Database` (`borissmiyan/ai-yak-harness`)
 
 ### 🎯 Твоя первичная задача:
 1. Запусти скрипт автоматической установки харнесса:

@@ -107,7 +107,7 @@ async function main() {
 
     if (!targetRun) {
         console.error(`\n❌ Ошибка: Запуск CI Quality Gate для коммита ${shortSha} не найден в течение 90 секунд.`);
-        console.error('Проверьте подключение к GitHub или статус https://github.com/johnklayton2001-arch/elconder_test_db/actions');
+        console.error('Проверьте подключение к GitHub или статус https://github.com/borissmiyan/ai-yak-harness/actions');
         process.exit(1);
     }
 
