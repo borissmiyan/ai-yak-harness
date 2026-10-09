@@ -22,34 +22,42 @@
    - Изменяйте **только** файлы, прямо требуемые задачей. Никакого непрошенного рефакторинга соседнего кода.
    - Ограничение на один коммит: не более **450 строк кода** и не более **10 файлов** (контролируется `scripts/verify-diff-budget.mjs`). Обход только по явному флагу человека `ALLOW_LARGE_DIFF=true`.
 
-4. **RESOURCE HYGIENE & ZERO LEAKS:**
+4. **ARCHITECTURAL DECISIONS (ADRs) & PROJECT CONTEXT:**
+   - Перед проектированием и архитектурным выбором агент ОБЯЗАН свериться с `.planning/CONTEXT.md` и существующими ADR в `.planning/decisions/`.
+   - Любое новое ключевое архитектурное решение фиксируется в `.planning/decisions/D-XX-<slug>.md` по шаблону `TEMPLATE.md`.
+
+5. **FOLDER-SCOPED RULES (LAZY LOADING):**
+   - Соблюдайте локальные правила `AGENTS.md` в подпапках проекта (`src/services/AGENTS.md`, `src/shared/ui/AGENTS.md`, `src/features/AGENTS.md`, `src/types/AGENTS.md`, `src/db/AGENTS.md`, `src/utils/AGENTS.md`).
+   - Агент обязан считывать их по требованию (on-demand) при переходе к работе над файлами в соответствующей директории.
+
+6. **DESIGN SYSTEM COMPLIANCE & COMPONENT REGISTRY:**
+   - Перед созданием любого нового UI-компонента агент ОБЯЗАН проверить `COMPONENTS.md`. Если компонент уже существует — переиспользовать его. Запрещено плодить дубликаты!
+   - Строго следовать токенам `DESIGN-AI.md` и никогда не нарушать запреты из `ANTIPATTERNS.md`.
+   - **Запрет сырых эмодзи в JSX:** Не использовать символы (⚡, 📝, 🟢, 🛡️, etc.) в UI разметке. Использовать только векторные SVG-иконки из `lucide-react`.
+
+7. **RESOURCE HYGIENE & ZERO LEAKS:**
    - Все `URL.createObjectURL()` обязаны иметь парный `URL.revokeObjectURL()` в cleanup.
    - Все слушатели событий `addEventListener` в `useEffect` обязаны иметь cleanup `removeEventListener` или `AbortController`.
    - Все таймеры `setInterval` обязаны иметь `clearInterval`.
    - Проверяется гейтом `npm run check:hygiene` (`scripts/verify-resource-hygiene.mjs`).
 
-5. **COMPONENT MEMOIZATION:**
+8. **COMPONENT MEMOIZATION & 500-LINE LIMIT:**
    - Все компоненты списков и карточек (`*Card.tsx`, `*Row.tsx`, `*Item.tsx`) обязаны быть обернуты в `React.memo` для предотвращения каскадных ре-рендеров.
-   - Проверяется гейтом `npm run check:memo` (`scripts/verify-memoization.mjs`).
+   - Максимум **500 строк** на файл. При превышении — декомпозировать на хуки, утилиты и подкомпоненты.
 
-6. **AST DESIGN SYSTEM & ARCHITECTURE RULES:**
-   - **Запрет сырых эмодзи в JSX:** Не использовать символы (⚡, 📝, 🟢, 🛡️, etc.) в UI разметке. Использовать только векторные SVG-иконки из `lucide-react`.
-   - **FSD Layer Boundaries:** Компоненты общих слоев (`shared/`, `features/`, `services/`, `db/`) никогда не должны импортировать страницы (`@/pages/**`) или `App`.
-   - **Лимит 500 строк на файл:** Файлы не должны превышать 500 строк во избежание выпадения контекста LLM.
-
-7. **HERMETIC & DETERMINISTIC TESTING:**
+9. **HERMETIC & DETERMINISTIC TESTING:**
    - Все тесты обязаны быть офлайн-герметичными (`process.env.TZ = 'UTC'`).
-   - Любой не замоканный сетевой вызов (`fetch`) блокируется с исключением `[Hermetic Test Violation]`.
+   - Любой незамоканный сетевой вызов (`fetch`) блокируется с исключением `[Hermetic Test Violation]`.
    - Для генерации моковых данных используйте детерминированные фабрики с фиксированным сидом (`createPrng` / Mulberry32).
 
-8. **ОБЯЗАТЕЛЬНЫЙ 5-ЭТАПНЫЙ ЦИКЛ РАЗРАБОТКИ (ВСЕГДА И ДЛЯ ВСЕХ ЗАДАЧ):**
+10. **ОБЯЗАТЕЛЬНЫЙ 5-ЭТАПНЫЙ ЦИКЛ РАЗРАБОТКИ (ВСЕГДА И ДЛЯ ВСЕХ ЗАДАЧ):**
    1. **Этап 1: Research (Исследователь):** Анализ AST-графа, типов, моделей БД и инвариантов перед написанием плана.
    2. **Этап 2: Plan & Spec (Проектировщик):** Формирование плана с TDD-микрошагами (2–5 мин), границами скоупа (Non-Goals) и оценкой Diff Budget (< 450 строк).
    3. **Этап 3: Adversarial Critic Gate (Сомневающийся Агент):** Допрос плана адвокатом дьявола по 7 фильтрам (`skills/adversarial-critic/SKILL.md`). **Код СТРОГО ЗАБЛОКИРОВАН до вердикта `APPROVED`**.
    4. **Этап 4: TDD Execution (Разработчик):** Реализация циклами Red-Green-Refactor под контролем pre-commit хуков и лимита диффа.
    5. **Этап 5: Deterministic Verification (Приемка):** Обязательное подтверждение `npm run check` и `npm run build` с 0 ошибок, а после `git push` — `npm run verify:remote` (код выхода 0).
 
-9. **STRYKER MUTATION & SNYK SECURITY ON-DEMAND POLICY:**
+11. **STRYKER MUTATION & SNYK SECURITY ON-DEMAND POLICY:**
    - **СТРОГИЙ ЗАПРЕТ АВТОЗАПУСКА:** Инструменты мутационного тестирования Stryker CLI (`npm run test:mutate`) и сканер безопасности Snyk (`npm run check:security:snyk`) СТРОГО ЗАПРЕЩЕНО запускать автоматически в pre-commit, `npm run check`, `npm run build` или при общих фразах («давай», «делай», «погнали»).
    - **ПРАВИЛО НАПОМИНАНИЯ (ON-DEMAND REMINDER):** Агент обязан лишь ненавязчиво напоминать разработчику (Борису), что при необходимости глубокой проверки он может запустить Stryker CLI или Snyk.
    - **ЯВНАЯ КОМАНДА ДЛЯ ЗАПУСКА:** Агент запускает `npm run test:mutate` ТОЛЬКО по прямой явной команде: «запусти Stryker CLI» (или «запусти мутационные тесты»). Агент запускает `npm run check:security:snyk` ТОЛЬКО по прямой явной команде: «запусти Snyk» (или «запусти проверку Snyk»).

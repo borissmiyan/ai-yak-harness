@@ -4,13 +4,17 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 /**
- * 🚀 AI Engineering Harness 1-Click Installer (Universal Standard)
+ * 🚀 AI Yak Harness 1-Click Installer (Universal Standard)
  * 
- * Автоматически подключает полный защитный контур (AI Harness)
- * в любой JavaScript / TypeScript проект.
+ * Автоматически подключает полный инженерный и когнитивный контур (AI Harness):
+ * 1. 8 столпов контроля качества (diff-budget, no-secrets, memory hygiene, anti-tampering)
+ * 2. Архитектурное планирование (ADR, .planning/CONTEXT.md)
+ * 3. Локальные правила поддиректорий (folder-scoped AGENTS.md)
+ * 4. Полный пакет скиллов для автономных ИИ-агентов (adversarial-critic, brainstorming, writing-plans и др.)
+ * 5. Реестры документации и дизайн-системы (PURPOSE, DESIGN-AI, COMPONENTS, ANTIPATTERNS)
  * 
  * Использование:
- * node ai-yak-harness/setup.mjs [целевая_папка_проекта]
+ * node /path/to/ai-yak-harness/setup.mjs [целевая_папка_проекта]
  */
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,7 +23,7 @@ const __dirname = path.dirname(__filename);
 const targetDir = process.argv[2] ? path.resolve(process.argv[2]) : process.cwd();
 
 console.log('='.repeat(70));
-console.log('🚀 [AI Harness Installer] Инициализация полного защитного контура...');
+console.log('🚀 [AI Yak Harness Installer] Инициализация полного инженерного контура...');
 console.log(`📁 Целевой проект: ${targetDir}`);
 console.log('='.repeat(70));
 
@@ -34,7 +38,9 @@ const dirsToCreate = [
     path.join(targetDir, 'scripts'),
     path.join(targetDir, '.husky'),
     path.join(targetDir, '.github', 'workflows'),
-    path.join(targetDir, '.agents', 'skills', 'adversarial-critic'),
+    path.join(targetDir, '.planning', 'decisions'),
+    path.join(targetDir, '.agents', 'skills'),
+    path.join(targetDir, '.agents', 'rules', 'folder-scoped'),
     path.join(targetDir, 'src', 'test'),
     path.join(targetDir, 'src', 'utils'),
     path.join(targetDir, 'e2e'),
@@ -48,7 +54,7 @@ for (const dir of dirsToCreate) {
     }
 }
 
-// 2. Копируем скрипты верификации
+// 2. Копируем проверочные скрипты верификации (scripts/)
 const scriptsSourceDir = path.join(__dirname, 'scripts');
 const scriptsTargetDir = path.join(targetDir, 'scripts');
 
@@ -61,11 +67,11 @@ if (fs.existsSync(scriptsSourceDir)) {
         try {
             fs.chmodSync(destFile, 0o755);
         } catch {}
-        console.log(`  🛡️ Установлен скрипт: scripts/${file}`);
+        console.log(`  📜 Установлен скрипт верификации: scripts/${file}`);
     }
 }
 
-// 3. Копируем хуки Husky
+// 3. Копируем Git-хуки (.husky/)
 const hooksSourceDir = path.join(__dirname, 'hooks');
 const hooksTargetDir = path.join(targetDir, '.husky');
 
@@ -91,16 +97,114 @@ if (fs.existsSync(ciSourceFile)) {
     console.log(`  🤖 Установлен CI Quality Gate: .github/workflows/ci-quality-gate.yml`);
 }
 
-// 5. Копируем скилл Adversarial Critic
-const skillSourceFile = path.join(__dirname, 'skills', 'adversarial-critic', 'SKILL.md');
-const skillTargetFile = path.join(targetDir, '.agents', 'skills', 'adversarial-critic', 'SKILL.md');
-
-if (fs.existsSync(skillSourceFile) && !fs.existsSync(skillTargetFile)) {
-    fs.copyFileSync(skillSourceFile, skillTargetFile);
-    console.log(`  🕵️ Установлен скилл Сомневающегося Агента: .agents/skills/adversarial-critic/SKILL.md`);
+// 5. Копируем полный боевой комплект скиллов (.agents/skills/)
+const skillsSourceDir = path.join(__dirname, 'skills');
+if (fs.existsSync(skillsSourceDir)) {
+    const skillDirs = fs.readdirSync(skillsSourceDir);
+    for (const skillName of skillDirs) {
+        const srcSkillDir = path.join(skillsSourceDir, skillName);
+        if (fs.statSync(srcSkillDir).isDirectory()) {
+            const destSkillDir = path.join(targetDir, '.agents', 'skills', skillName);
+            fs.mkdirSync(destSkillDir, { recursive: true });
+            
+            const copyRecursive = (src, dest) => {
+                const entries = fs.readdirSync(src, { withFileTypes: true });
+                for (const entry of entries) {
+                    const srcPath = path.join(src, entry.name);
+                    const destPath = path.join(dest, entry.name);
+                    if (entry.isDirectory()) {
+                        fs.mkdirSync(destPath, { recursive: true });
+                        copyRecursive(srcPath, destPath);
+                    } else if (!fs.existsSync(destPath)) {
+                        fs.copyFileSync(srcPath, destPath);
+                    }
+                }
+            };
+            copyRecursive(srcSkillDir, destSkillDir);
+            console.log(`  🧠 Установлен скилл агента: .agents/skills/${skillName}`);
+        }
+    }
 }
 
-// 6. Копируем конфигурационные шаблоны и сниппеты
+// 6. Устанавливаем архитектурный контекст и ADR (.planning/)
+const planningSrcDir = path.join(__dirname, 'templates', 'planning');
+if (fs.existsSync(planningSrcDir)) {
+    const contextSrc = path.join(planningSrcDir, 'CONTEXT.md');
+    const contextDest = path.join(targetDir, '.planning', 'CONTEXT.md');
+    if (!fs.existsSync(contextDest)) {
+        fs.copyFileSync(contextSrc, contextDest);
+        console.log(`  📑 Создан архитектурный контекст: .planning/CONTEXT.md`);
+    }
+
+    const templateSrc = path.join(planningSrcDir, 'decisions', 'TEMPLATE.md');
+    const templateDest = path.join(targetDir, '.planning', 'decisions', 'TEMPLATE.md');
+    if (!fs.existsSync(templateDest)) {
+        fs.copyFileSync(templateSrc, templateDest);
+        console.log(`  🏛 Установлен шаблон решений: .planning/decisions/TEMPLATE.md`);
+    }
+
+    const d01Src = path.join(planningSrcDir, 'decisions', 'D-01-initial-architecture.md');
+    const d01Dest = path.join(targetDir, '.planning', 'decisions', 'D-01-initial-architecture.md');
+    if (!fs.existsSync(d01Dest)) {
+        fs.copyFileSync(d01Src, d01Dest);
+        console.log(`  🏛 Установлено базовое решение: .planning/decisions/D-01-initial-architecture.md`);
+    }
+}
+
+// 7. Устанавливаем реестры документации и дизайн-системы (PURPOSE, DESIGN-AI, COMPONENTS, ANTIPATTERNS)
+const docsSrcDir = path.join(__dirname, 'templates', 'docs');
+if (fs.existsSync(docsSrcDir)) {
+    const docFiles = [
+        { file: 'PURPOSE.md', label: 'Product Mission & Scope' },
+        { file: 'DESIGN-AI.md', label: 'Machine-Readable Design Tokens' },
+        { file: 'COMPONENTS.md', label: 'Component Registry (Anti-Duplicate)' },
+        { file: 'ANTIPATTERNS.md', label: 'Forbidden Antipatterns Registry' }
+    ];
+
+    for (const { file, label } of docFiles) {
+        const srcPath = path.join(docsSrcDir, file);
+        const destPath = path.join(targetDir, file);
+        if (fs.existsSync(srcPath) && !fs.existsSync(destPath)) {
+            fs.copyFileSync(srcPath, destPath);
+            console.log(`  📋 Установлен реестр: ${file} (${label})`);
+        }
+    }
+}
+
+// 8. Устанавливаем локальные правила для поддиректорий (Folder-Scoped AGENTS.md)
+const scopedRulesSrc = path.join(__dirname, 'templates', 'rules', 'scoped');
+if (fs.existsSync(scopedRulesSrc)) {
+    const folderMappings = [
+        { folder: path.join('src', 'services'), ruleFile: 'services-AGENTS.md' },
+        { folder: path.join('src', 'shared', 'ui'), ruleFile: 'ui-AGENTS.md' },
+        { folder: path.join('src', 'features'), ruleFile: 'features-AGENTS.md' },
+        { folder: path.join('src', 'types'), ruleFile: 'types-AGENTS.md' },
+        { folder: path.join('src', 'db'), ruleFile: 'db-AGENTS.md' },
+        { folder: path.join('src', 'utils'), ruleFile: 'utils-AGENTS.md' }
+    ];
+
+    for (const { folder, ruleFile } of folderMappings) {
+        const targetFolder = path.join(targetDir, folder);
+        const ruleSrc = path.join(scopedRulesSrc, ruleFile);
+        
+        // Всегда сохраняем эталон в .agents/rules/folder-scoped/
+        const backupDest = path.join(targetDir, '.agents', 'rules', 'folder-scoped', ruleFile);
+        if (fs.existsSync(ruleSrc) && !fs.existsSync(backupDest)) {
+            fs.copyFileSync(ruleSrc, backupDest);
+        }
+
+        // Если папка существует в проекте, кладем AGENTS.md прямо туда
+        if (fs.existsSync(targetFolder) && fs.existsSync(ruleSrc)) {
+            const folderAgentsDest = path.join(targetFolder, 'AGENTS.md');
+            if (!fs.existsSync(folderAgentsDest)) {
+                fs.copyFileSync(ruleSrc, folderAgentsDest);
+                console.log(`  📂 Установлены локальные правила для папки: ${folder}/AGENTS.md`);
+            }
+        }
+    }
+}
+
+// 9. Копируем конфигурационные шаблоны и сниппеты
 const configsToCopy = [
     { src: path.join(__dirname, 'configs', 'knip.json'), dest: path.join(targetDir, 'knip.json'), label: 'Knip Config' },
     { src: path.join(__dirname, 'configs', 'tsconfig.test.json'), dest: path.join(targetDir, 'tsconfig.test.json'), label: 'TypeScript Test Config' },
@@ -121,7 +225,7 @@ for (const cfg of configsToCopy) {
     }
 }
 
-// 6.5. Копируем E2E шаблоны Playwright (e2e/)
+// 10. Копируем E2E шаблоны Playwright (e2e/)
 const e2eSourceDir = path.join(__dirname, 'e2e');
 const e2eTargetDir = path.join(targetDir, 'e2e');
 
@@ -137,7 +241,7 @@ if (fs.existsSync(e2eSourceDir)) {
     }
 }
 
-// 7. Безопасно обновляем package.json
+// 11. Безопасно обновляем package.json
 const pkgRaw = fs.readFileSync(pkgPath, 'utf-8');
 const pkg = JSON.parse(pkgRaw);
 pkg.scripts = pkg.scripts || {};
@@ -171,14 +275,12 @@ for (const [key, value] of Object.entries(harnessScripts)) {
     }
 }
 
-// Если в проекте нет базового "check", добавляем шаблон
 if (!pkg.scripts.check) {
     pkg.scripts.check = 'tsc --noEmit && eslint src && vitest run';
     modifiedScripts++;
     console.log(`  ➕ Сформирован базовый unified check: "check": "${pkg.scripts.check}"`);
 }
 
-// Настраиваем lint-staged
 if (!pkg['lint-staged']) {
     pkg['lint-staged'] = {
         '*.{ts,tsx}': [
@@ -195,31 +297,29 @@ if (modifiedScripts > 0) {
     console.log(`📝 Обновлен package.json (+${modifiedScripts} параметров).`);
 }
 
-// 8. Проверка и инструкция по правилам для агента
+// 12. Проверка и инструкция по правилам для агента
 const agentsRulePath = path.join(targetDir, 'AGENTS.md');
 const snippetSource = path.join(__dirname, 'rules', 'AGENTS_HARNESS_SNIPPET.md');
 
 if (!fs.existsSync(agentsRulePath) && fs.existsSync(snippetSource)) {
     fs.copyFileSync(snippetSource, agentsRulePath);
-    console.log(`📋 Создан файл правил для ИИ: AGENTS.md`);
-} else if (fs.existsSync(agentsRulePath)) {
-    console.log(`💡 AGENTS.md уже существует. Рекомендуется дополнить его правилами из ai-yak-harness/rules/AGENTS_HARNESS_SNIPPET.md`);
+    console.log(`📋 Создан корневой файл правил для ИИ: AGENTS.md`);
 }
 
 console.log('\n' + '='.repeat(70));
-console.log('✅ AI Engineering Harness успешно подключен в полном объеме!');
+console.log('✅ AI Yak Harness успешно подключен в полном объеме!');
 console.log('='.repeat(70));
-console.log('Следующие шаги:');
+console.log('Установленные подсистемы:');
+console.log('  1. 🛡️  8 инженерных столпов качества (diff-budget, secrets, hygiene, memo, etc.)');
+console.log('  2. 🧠 7 скиллов для агента (.agents/skills/: critic, brainstorming, plans, audit)');
+console.log('  3. 📑 Архитектурный контекст и ADR (.planning/CONTEXT.md, decisions/)');
+console.log('  4. 🎨 Документация и дизайн-система (PURPOSE, DESIGN-AI, COMPONENTS, ANTIPATTERNS)');
+console.log('  5. 📂 Локальные правила поддиректорий (folder-scoped AGENTS.md)');
+console.log('\nСледующие шаги:');
 console.log('1. Убедитесь, что установлены devDependencies:');
 console.log('   npm i -D husky lint-staged knip dpdm eslint-plugin-sonarjs eslint-plugin-promise rollup-plugin-visualizer @stryker-mutator/core @stryker-mutator/vitest-runner snyk react-scan');
 console.log('2. Инициализируйте хуки: npm run prepare');
-console.log('3. Проверьте статус всех гейтов:');
-console.log('   - node scripts/verify-diff-budget.mjs');
-console.log('   - node scripts/verify-no-secrets.mjs');
-console.log('   - node scripts/verify-resource-hygiene.mjs');
-console.log('   - node scripts/verify-memoization.mjs');
-console.log('   - node scripts/verify-schema-drift.mjs');
-console.log('   - npm run check');
+console.log('3. Заполните .planning/CONTEXT.md и PURPOSE.md');
 console.log('\n⚠️ ВАЖНО: Stryker CLI (npm run test:mutate) и Snyk (npm run check:security:snyk)');
 console.log('   запускаются ТОЛЬКО по прямому явному указанию разработчика.');
 console.log('='.repeat(70) + '\n');

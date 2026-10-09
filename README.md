@@ -144,11 +144,45 @@ npm run prepare
 | `e2e/07-memory-leak-hygiene.spec.ts` | E2E Playwright тест: контроль утечек JS Heap через CDP (`HeapProfiler.collectGarbage`) |
 | `e2e/08-visual-regression.spec.ts` | E2E Playwright тест: визуальная регрессия и контроль геометрии Layout |
 
-### 4. Роли и Скиллы Агента (`skills/`)
+### 4. Архитектура, ADR и Контекст (`templates/planning/`)
 
-| Файл | Назначение |
+| Шаблон | Назначение |
 | :--- | :--- |
-| `skills/adversarial-critic/SKILL.md` | Роль «Сомневающийся Агент / Адвокат Дьявола»: 7 фильтров допроса плана (Offline/State Integrity, Physical/Domain Invariants, Diff Budget, Type Safety, Race Conditions, Anti-Tampering, UI/Icon Compliance). Код строго заблокирован до вердикта `APPROVED`. |
+| `templates/planning/CONTEXT.md` | Единый источник правды: стек, текущий статус, структура сущностей и реестр принятых решений. |
+| `templates/planning/decisions/TEMPLATE.md` | Стандартный шаблон Architecture Decision Record (Status, Context, Decision, Invariants, Consequences). |
+| `templates/planning/decisions/D-01-initial-architecture.md` | Базовое архитектурное решение (D-01): 5-этапный цикл, изоляция сетей, immutable-тесты. |
+
+### 5. Локальные правила поддиректорий (`templates/rules/scoped/`)
+
+| Шаблон | Назначение (Lazy Loading для агента) |
+| :--- | :--- |
+| `services-AGENTS.md` | Правила для `src/services/`: офлайн-отказоустойчивость, тайм-ауты, кэш, изоляция от React UI. |
+| `ui-AGENTS.md` | Правила для `src/shared/ui/`: токены дизайна, тач-таргеты, запрет сырых эмодзи, геометрия. |
+| `features-AGENTS.md` | Правила для `src/features/`: модульная изоляция фич, запрет спагетти кросс-импортов. |
+| `types-AGENTS.md` | Правила для `src/types/`: строгая типизация, ноль `any`, семантическая фиксация DTO. |
+| `db-AGENTS.md` | Правила для `src/db/` или `supabase/`: неизменяемые миграции, индексы, RLS изоляция. |
+| `utils-AGENTS.md` | Правила для `src/utils/`: детерминированные чистые функции, 100% юнит-покрытие. |
+
+### 6. Полный боевой комплект скиллов (`skills/`)
+
+| Скилл | Назначение |
+| :--- | :--- |
+| `adversarial-critic` | «Сомневающийся Агент / Адвокат Дьявола»: 7 фильтров состязательного допроса плана. Код заблокирован до `APPROVED`. |
+| `brainstorming` | Исследование замысла, поиск развилок и ограничений перед проектированием кода. |
+| `writing-plans` | Пошаговое планирование (TDD micro-steps 2–5 мин) с оценкой Diff Budget (< 450 строк). |
+| `codebase-audit` | Глубокий аудит на утечки памяти, лишние ре-рендеры, антипаттерны `useEffect` и технический долг. |
+| `verification-before-completion` | Жесткий протокол: запрет отчета о готовности без реальных доказательств с 0 ошибок. |
+| `test-driven-development` | Классический цикл Red-Green-Refactor для минимизации багов и соблюдения инвариантов. |
+| `design-system-creator` | Автоматическое ведение и актуализация реестров дизайн-системы и компонентов. |
+
+### 7. Реестры документации и дизайн-системы (`templates/docs/`)
+
+| Документ | Назначение |
+| :--- | :--- |
+| `templates/docs/PURPOSE.md` | Продуктовая миссия, целевая аудитория, ключевые боли и критерии успеха. |
+| `templates/docs/DESIGN-AI.md` | Машиночитаемые правила токенов дизайна (типографика, цвета, радиусы, правила для ИИ). |
+| `templates/docs/COMPONENTS.md` | Плоский реестр компонентов (Flat Component Registry): обязателен для проверки агентом во избежание дубликатов. |
+| `templates/docs/ANTIPATTERNS.md` | Живая база запрещённых антипаттернов проекта (❌ WRONG vs ✅ CORRECT). |
 
 ### 5. Безопасность (`utils/`)
 
