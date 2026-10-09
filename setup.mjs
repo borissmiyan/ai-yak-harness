@@ -251,6 +251,7 @@ const harnessScripts = {
     'check:circular': 'node scripts/verify-no-circular.mjs',
     'check:hygiene': 'node scripts/verify-resource-hygiene.mjs',
     'check:memo': 'node scripts/verify-memoization.mjs',
+    'check:design': 'node scripts/verify-design-system.mjs',
     'check:dead-code': 'knip',
     'check:schema-drift': 'node scripts/verify-schema-drift.mjs',
     'build:analyze': 'ANALYZE=true vite build',

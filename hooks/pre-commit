@@ -5,4 +5,5 @@ node scripts/verify-no-circular.mjs
 node scripts/verify-resource-hygiene.mjs
 node scripts/verify-memoization.mjs
 node scripts/verify-schema-drift.mjs
+node scripts/verify-design-system.mjs --staged
 npx lint-staged
