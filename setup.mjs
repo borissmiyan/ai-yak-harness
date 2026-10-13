@@ -45,7 +45,8 @@ const dirsToCreate = [
     path.join(targetDir, 'src', 'test'),
     path.join(targetDir, 'src', 'utils'),
     path.join(targetDir, 'e2e'),
-    path.join(targetDir, 'configs')
+    path.join(targetDir, 'configs'),
+    path.join(targetDir, 'docs')
 ];
 
 for (const dir of dirsToCreate) {
@@ -151,6 +152,14 @@ const projectRulesDest = path.join(targetDir, ".agents", "rules", "project-rules
 if (fs.existsSync(projectRulesSrc) && !fs.existsSync(projectRulesDest)) {
     fs.copyFileSync(projectRulesSrc, projectRulesDest);
     console.log("  ⚡ Установлены правила проекта: .agents/rules/project-rules.md");
+}
+
+// 5.3. Устанавливаем руководство по AI-харнессу (docs/AI_HARNESS_GUIDE.md)
+const harnessGuideSrc = path.join(__dirname, 'docs', 'AI_HARNESS_GUIDE.md');
+const harnessGuideDest = path.join(targetDir, 'docs', 'AI_HARNESS_GUIDE.md');
+if (fs.existsSync(harnessGuideSrc) && !fs.existsSync(harnessGuideDest)) {
+    fs.copyFileSync(harnessGuideSrc, harnessGuideDest);
+    console.log('  📚 Установлено руководство по харнессу: docs/AI_HARNESS_GUIDE.md');
 }
 
 // 6. Устанавливаем архитектурный контекст и ADR (.planning/)
