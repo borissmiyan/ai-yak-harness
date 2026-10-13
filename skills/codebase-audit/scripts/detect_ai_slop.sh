@@ -161,7 +161,7 @@ echo "  trust a clean result here on its own."
 
 # ──────────────────────────────────────────────
 echo ""
-echo -e "${RED}🔴 CRITICAL: 'as unknown as' double type cast${NC}"
+echo -e "${YELLOW}🟡 WARNING: 'as unknown as' double type cast${NC}"
 echo "-------------------------------"
 RES=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS 'as unknown as' "$TARGET" 2>/dev/null | grep -v '.test.' || true)
 print_or_ok "$RES" "✅ No double casts found"
@@ -179,7 +179,7 @@ log_finding "Local Modal State" "$RES"
 echo ""
 echo -e "${RED}🔴 CRITICAL: Database Overfetching (select('*'))${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS -E "\.select\(\s*['\"]\s*\*\s*['\"]\s*\)" "$TARGET" 2>/dev/null | head -10 || true)
+RES=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS -E "\.select\(\s*['\"]\s*\*\s*['\"]\s*\)" "$TARGET" 2>/dev/null || true)
 print_or_ok "$RES" "✅ No select('*') found"
 log_finding "Database Overfetching" "$RES"
 
@@ -244,7 +244,14 @@ log_finding "Unmemoized Context Provider" "$RES"
 echo ""
 echo -e "${RED}🔴 CRITICAL: Missing unsubscribe for Auth side-effects${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS 'onAuthStateChange' "$TARGET" 2>/dev/null | grep -v 'unsubscribe' || true)
+RES=""
+while IFS= read -r file; do
+  if ! grep -q "unsubscribe" "$file"; then
+    MSG="🔴 $file — Missing authListener unsubscribe cleanup"
+    echo "  $MSG"
+    RES="${RES}${MSG}"$'\n'
+  fi
+done < <(grep -rl --include='*.tsx' --include='*.ts' $EXCLUDE_OPTS "onAuthStateChange" "$TARGET" 2>/dev/null)
 print_or_ok "$RES" "✅ Auth listeners seem managed"
 log_finding "Auth Listener Leaks" "$RES"
 
