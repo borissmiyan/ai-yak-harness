@@ -12,7 +12,8 @@
     "check:design:fix": "node scripts/verify-design-system.mjs --fix",
     "design:export-tokens": "node scripts/export-design-tokens.mjs",
     "design:scaffold-ui": "node scripts/scaffold-ui-kit.mjs",
-    "design:showcase": "node scripts/generate-design-showcase.mjs"
+    "design:showcase": "node scripts/generate-design-showcase.mjs",
+    "check:security:antipatterns": "node scripts/verify-security-antipatterns.mjs"
   },
   "keywords": [
     "ai-agent",
