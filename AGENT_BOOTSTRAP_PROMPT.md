@@ -57,7 +57,7 @@
 7. **5-ЭТАПНЫЙ ЦИКЛ РАЗРАБОТКИ (ДЛЯ ВСЕХ ЗАДАЧ):**
    - 1. Research (сканирование архитектуры и типов)
    - 2. Plan & Spec (TDD-микрошаги, границы Scope, Non-Goals, Diff Budget < 450 строк)
-   - 3. Adversarial Critic Gate (допрос плана адвокатом дьявола по 7 фильтрам из `.agents/skills/adversarial-critic/SKILL.md`). **Код СТРОГО ЗАБЛОКИРОВАН до вердикта `APPROVED`**.
+   - 3. Adversarial Critic Gate (допрос плана независимым сомневающимся аудитором по 7 фильтрам из `.agents/skills/adversarial-critic/SKILL.md`). **Код СТРОГО ЗАБЛОКИРОВАН до вердикта `APPROVED`**.
    - 4. TDD Execution (Red-Green-Refactor под контролем pre-commit хуков)
    - 5. Deterministic Verification (`npm run check` + `npm run build` + `npm run verify:remote`).
 8. **STRYKER & SNYK ON-DEMAND POLICY:**

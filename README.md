@@ -55,7 +55,7 @@ node ./templates/ai-yak-harness/setup.mjs .
 - 🛡️ **Scripts (`scripts/`):** Diff budget guard, anti-test-tampering gate, leak hygiene scanner, memoization checker, no-secrets scanner, schema drift gate.
 - 🪝 **Git Hooks (`.husky/`):** Pre-commit and pre-push barriers that block invalid commits before they leave the machine.
 - 🚦 **CI Quality Gate (`.github/workflows/ci-quality-gate.yml`):** Zero-trust GitHub Actions workflow running on a pristine VM.
-- 🧠 **Adversarial Critic Skill (`.agents/skills/adversarial-critic/`):** Devil's advocate prompt protocol running a 7-filter audit before any code modification.
+- 🧠 **Adversarial Critic Skill (`.agents/skills/adversarial-critic/`):** Rigorous independent adversarial audit protocol running a 7-filter audit before any code modification.
 - 📋 **ADR Architecture Framework (`.planning/decisions/`):** Context tracking and Decision Record templates.
 - 📦 **NPM Scripts (`package.json`):** Adds unified verification commands (`npm run check`, `check:hygiene`, `check:memo`, `check:schema-drift`, `verify:remote`).
 
