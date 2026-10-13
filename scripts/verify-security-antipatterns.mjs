@@ -76,6 +76,43 @@ export function checkFrontendIdorLeaks(content, filePath = '') {
     return violations;
 }
 
+export function checkHardcodedSecretFallbacks(content, filePath = '') {
+    if (content.includes('@security-gate-ignore')) return [];
+    const violations = [];
+
+    // Detect patterns like Deno.env.get(...) || 'raw_token', process.env.X || 'raw_token', or import.meta.env.X || 'raw_token'
+    const fallbackRegex = /(?:Deno\.env\.get\([^)]*\)|process\.env(?:\.[a-zA-Z0-9_]+|\[['"][^'"]+['"]\])|import\.meta\.env(?:\.[a-zA-Z0-9_]+|\[['"][^'"]+['"]\]))\s*\|\|\s*['"]([a-zA-Z0-9_\-\.]{20,})['"]/g;
+    let match;
+    while ((match = fallbackRegex.exec(content)) !== null) {
+        const candidate = match[1];
+        // Ignore benign URLs, email addresses, and filenames
+        if (candidate.startsWith('http://') || candidate.startsWith('https://') || candidate.includes('@') || candidate.includes('/')) {
+            continue;
+        }
+        violations.push({
+            file: filePath,
+            message: `Hardcoded credential fallback detected in environment access (${candidate.slice(0, 6)}...): remove raw token and require environment configuration.`
+        });
+    }
+
+    return violations;
+}
+
+export function checkClientSecretExposure(content, filePath = '') {
+    if (content.includes('@security-gate-ignore')) return [];
+    const violations = [];
+
+    const hasClientSecret = /import\.meta\.env\.VITE_[A-Z0-9_]*SECRET[A-Z0-9_]*/i.test(content);
+    if (hasClientSecret) {
+        violations.push({
+            file: filePath,
+            message: 'Client bundle secret exposure: Secret key accessed via VITE_ prefix compiles into public browser bundle. Use server-side proxy or presigned URLs.'
+        });
+    }
+
+    return violations;
+}
+
 function getAllFiles(dir, extensions) {
     const files = [];
     if (!fs.existsSync(dir)) return files;
@@ -120,7 +157,16 @@ export function verifySecurityAntipatterns() {
         }
     }
 
-    // 2. Проверка фронтенд кода
+    // 2. Проверка Edge Functions на захардкоженные секреты
+    const functionsDir = path.resolve(process.cwd(), 'supabase/functions');
+    const functionFiles = getAllFiles(functionsDir, ['.ts']);
+    for (const filePath of functionFiles) {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        const relPath = path.relative(process.cwd(), filePath);
+        violations.push(...checkHardcodedSecretFallbacks(content, relPath));
+    }
+
+    // 3. Проверка фронтенд кода
     const srcDir = path.resolve(process.cwd(), 'src');
     const tsxFiles = getAllFiles(srcDir, ['.tsx', '.ts']);
     for (const filePath of tsxFiles) {
@@ -128,6 +174,8 @@ export function verifySecurityAntipatterns() {
         const content = fs.readFileSync(filePath, 'utf-8');
         const relPath = path.relative(process.cwd(), filePath);
         violations.push(...checkFrontendIdorLeaks(content, relPath));
+        violations.push(...checkClientSecretExposure(content, relPath));
+        violations.push(...checkHardcodedSecretFallbacks(content, relPath));
     }
 
     if (violations.length > 0) {
