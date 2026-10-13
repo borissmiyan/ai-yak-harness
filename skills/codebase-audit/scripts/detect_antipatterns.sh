@@ -59,11 +59,11 @@ echo ""
 echo -e "${YELLOW}🟡 WARNING: TODO/FIXME/HACK comments${NC}"
 echo "-------------------------------"
 TODO_COUNT=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS \
-  -E 'TODO|FIXME|HACK|XXX' \
+  -E '(?://|/\*|\*)\s*(TODO|FIXME|HACK|XXX)\b' \
   "$TARGET" 2>/dev/null | wc -l)
 echo "  Found: $TODO_COUNT TODO/FIXME/HACK comments"
 grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS \
-  -E 'TODO|FIXME|HACK|XXX' \
+  -E '(?://|/\*|\*)\s*(TODO|FIXME|HACK|XXX)\b' \
   "$TARGET" 2>/dev/null | head -10
 
 echo ""
@@ -92,7 +92,7 @@ echo -e "${YELLOW}🟡 WARNING: process.env usage (should be import.meta.env)${N
 echo "-------------------------------"
 grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS \
   'process\.env' \
-  "$TARGET" 2>/dev/null | grep -v 'vite.config' || echo "  ✅ No process.env usage"
+  "$TARGET" 2>/dev/null | grep -v 'vite.config' | grep -v 'playwright.config' | grep -v 'vitest.config' | grep -v 'src/test/' | grep -v '__tests__' || echo "  ✅ No process.env usage"
 
 echo ""
 echo -e "${CYAN}📊 INFO: Duplicate code blocks (potential DRY violations)${NC}"

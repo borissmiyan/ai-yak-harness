@@ -108,7 +108,8 @@ config = {
     'severityOverrides': {},
     'customChecks': [],
     'failOn': 'CRITICAL',
-    'autoFixCommand': ''
+    'autoFixCommand': '',
+    'npmAuditIgnore': []
 }
 for p in candidates:
     if os.path.isfile(p):
@@ -381,8 +382,10 @@ with open(raw_log, 'r', errors='replace') as f:
                                     u_url = itm.get('url', '')
                                     k_key = f"npm-audit|package.json|1|{pkg}:{t_title}"
                                     f_id = hashlib.md5(k_key.encode('utf-8')).hexdigest()[:10]
-                                    d_desc = f"Dependency vulnerability in {pkg}: {t_title} ({s_level}) {u_url}".strip()
-                                    rows.append((f_id, sev, "npm-audit", "package.json", "1", d_desc, None))
+                                    ign = None
+                                    if pkg in cfg.get('npmAuditIgnore', []):
+                                        ign = f"acknowledged in .auditrc.json (transitive or non-critical: {pkg})"
+                                    rows.append((f_id, sev, "npm-audit", "package.json", "1", d_desc, ign))
                 except Exception:
                     pass
                 npm_audit_buffer = []
