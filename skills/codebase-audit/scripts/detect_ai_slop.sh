@@ -203,7 +203,7 @@ log_finding "Possibly Unchecked Empty .in() Array" "$RES"
 echo ""
 echo -e "${RED}🔴 CRITICAL: Ad-hoc Hex Colors${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS "text-\[#[0-9a-fA-F]*\]\|bg-\[#[0-9a-fA-F]*\]" "$TARGET" 2>/dev/null | head -10 || true)
+RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS "text-\[#[0-9a-fA-F]*\]\|bg-\[#[0-9a-fA-F]*\]" "$TARGET" 2>/dev/null | grep -v '\.test\.' | grep -v '__tests__' || true)
 print_or_ok "$RES" "✅ No ad-hoc hex colors found."
 log_finding "Ad-hoc Hex Colors" "$RES"
 
@@ -313,7 +313,7 @@ log_finding "Index-based Keys" "$RES"
 echo ""
 echo -e "${RED}🔴 PERF: Double JSON.stringify${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS 'JSON\.stringify(.*JSON\.stringify' "$TARGET" 2>/dev/null || true)
+RES=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS -E 'JSON\.stringify\(\s*JSON\.stringify' "$TARGET" 2>/dev/null | grep -v '\.test\.' | grep -v '__tests__' || true)
 print_or_ok "$RES" "✅ No nested stringify found."
 log_finding "Nested JSON.stringify" "$RES"
 
