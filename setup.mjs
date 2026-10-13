@@ -40,6 +40,7 @@ const dirsToCreate = [
     path.join(targetDir, '.github', 'workflows'),
     path.join(targetDir, '.planning', 'decisions'),
     path.join(targetDir, '.agents', 'skills'),
+    path.join(targetDir, '.agents', 'rules'),
     path.join(targetDir, '.agents', 'rules', 'folder-scoped'),
     path.join(targetDir, 'src', 'test'),
     path.join(targetDir, 'src', 'utils'),
@@ -133,6 +134,23 @@ if (fs.existsSync(skillsSourceDir)) {
             console.log(`  🧠 Установлен скилл агента: .agents/skills/${skillName}`);
         }
     }
+}
+
+
+// 5.1. Устанавливаем профиль разработчика (.agents/USER_PROFILE.md)
+const userProfileSrc = path.join(__dirname, "templates", "USER_PROFILE.TEMPLATE.md");
+const userProfileDest = path.join(targetDir, ".agents", "USER_PROFILE.md");
+if (fs.existsSync(userProfileSrc) && !fs.existsSync(userProfileDest)) {
+    fs.copyFileSync(userProfileSrc, userProfileDest);
+    console.log("  👤 Установлен профиль разработчика: .agents/USER_PROFILE.md");
+}
+
+// 5.2. Устанавливаем базовые правила (.agents/rules/project-rules.md)
+const projectRulesSrc = path.join(__dirname, "templates", "rules", "project-rules.TEMPLATE.md");
+const projectRulesDest = path.join(targetDir, ".agents", "rules", "project-rules.md");
+if (fs.existsSync(projectRulesSrc) && !fs.existsSync(projectRulesDest)) {
+    fs.copyFileSync(projectRulesSrc, projectRulesDest);
+    console.log("  ⚡ Установлены правила проекта: .agents/rules/project-rules.md");
 }
 
 // 6. Устанавливаем архитектурный контекст и ADR (.planning/)
