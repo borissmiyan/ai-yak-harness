@@ -9,13 +9,13 @@
 Привет! В этом проекте мы подключаем наш эталонный детерминированный защитный контур разработки — **AI Yak Harness**.
 
 ### 🌟 Центральный репозиторий и эталон:
-- **Центральный репозиторий харнесса:** `/Users/borissmiyan/Work/AppDev/ai-yak-harness`
-- **Живой эталон реализации (Golden Reference):** `/Users/borissmiyan/Work/AppDev/Father Work Database` (`borissmiyan/ai-yak-harness`)
+- **Центральный репозиторий харнесса:** `https://github.com/borissmiyan/ai-yak-harness`
+- **Живой эталон реализации (Golden Reference):** `https://github.com/borissmiyan/ai-yak-harness` (`borissmiyan/ai-yak-harness`)
 
 ### 🎯 Твоя первичная задача:
 1. Запусти скрипт автоматической установки харнесса:
    ```bash
-   node /Users/borissmiyan/Work/AppDev/ai-yak-harness/setup.mjs .
+   node https://github.com/borissmiyan/ai-yak-harness/setup.mjs .
    ```
 2. Убедись, что установлены базовые инструменты верификации:
    ```bash

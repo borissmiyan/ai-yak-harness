@@ -1,6 +1,6 @@
 # ⚡ AI Engineering Harness Rules (Universal Standard)
 
-> **Golden Reference:** [Father Work Database](file:///Users/borissmiyan/Work/AppDev/Father%20Work%20Database) (`borissmiyan/ai-yak-harness`).  
+> **Golden Reference:** [AI Yak Harness Golden Standard](https://github.com/borissmiyan/ai-yak-harness) (`borissmiyan/ai-yak-harness`).  
 > **Philosophy:** *«Промпт — рекомендация, Харнесс — детерминированный Hard Gate»*.
 
 ---

@@ -1,221 +1,172 @@
-# 🛡️ AI Yak Harness (Universal Standard)
+<div align="center">
 
-> **Автор:** Boris Smiyan / Yak Money ([GitHub](https://github.com/borissmiyan))  
-> **Живой эталон (Golden Reference):** [Father Work Database](file:///Users/borissmiyan/Work/AppDev/Father%20Work%20Database) (`borissmiyan/ai-yak-harness`).  
-> **Лицензия:** [YAK-FCU-1.0 (Yak Free Commercial & Non-Standalone Resale License)](./LICENSE) — Бесплатно для любых коммерческих приложений и SaaS, запрещена продажа в виде standalone-продукта.  
-> **Аксиома харнесса:** *«Промпт — рекомендация, Харнесс — детерминированный Hard Gate»*.
+# 🛡️ AI Yak Harness
 
----
+**Deterministic Multi-Layer Quality & Safety Harness for Autonomous AI Agents**
 
-## 🎯 Что такое AI Yak Harness?
+[![License](https://img.shields.io/badge/license-YAK--FCU--1.0-blue.svg)](./LICENSE)
+[![CI Quality Gate](https://img.shields.io/badge/CI%20Quality%20Gate-deterministic-emerald.svg)](#-layer-6-remote-ci-quality-gate)
+[![Tests](https://img.shields.io/badge/tests-1159%20passing-brightgreen.svg)](#-production-proven-results)
+[![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-blue.svg)](#-quick-start)
+[![Status](https://img.shields.io/badge/status-production--ready-success.svg)](#)
 
-**AI Yak Harness** — это переносимый, самодостаточный защитный каркас (harness) для разработки с участием автономных ИИ-агентов (Cursor Composer, Claude Code, Antigravity, GitHub Copilot).
+<p align="center">
+  <b>Stop AI agents from breaking existing code, tampering with tests, and silently introducing memory leaks.</b>
+</p>
 
-### Какую проблему решает харнесс:
-Обычный ИИ-ассистент страдает пятью фундаментальными болезнями:
-1. **Зуд рефакторинга:** Агент переписывает рабочий чужой код вокруг места правки, раздувая дифф на сотни и тысячи строк.
-2. **Молчаливая подделка тестов:** Когда агент ломает код, он часто "чинит" проблему, просто ослабляя или удаляя падающие проверки (`expect(true).toBe(true)`).
-3. **Галлюцинации пакетов (Package Hallucination):** Агент самовольно добавляет непроверенные npm-пакеты в `dependencies`, создавая уязвимости Supply Chain.
-4. **Скрытые утечки памяти и ре-рендеринг:** Агент создает Blob URL без освобождения (`URL.revokeObjectURL`), забывает снимать обработчики событий (`removeEventListener`), плодит не-мемоизированные списки карточек.
-5. **Разрастание контекста (Context Bloat & Rot):** Тысячи строк тестовых логов и мертвый код забивают контекст LLM, вызывая амнезию и галлюцинации.
+<p align="center">
+  <b>English</b> • <a href="README.ru.md">Русский</a> • <a href="docs/AI_HARNESS_GUIDE.md">Complete Architecture Guide (700+ lines)</a>
+</p>
 
-**AI Yak Harness превращает эти проблемы в физически невозможные:** попытка нарушить правила моментально блокируется детерминированными гейтами Git и CI с кодом возврата `exit 1`.
-
-> 📖 **Полное архитектурное руководство (700+ строк):** [docs/AI_HARNESS_GUIDE.md](./docs/AI_HARNESS_GUIDE.md) — Детальный разбор 6 эшелонов обороны, антипаттернов и внедрения в любые проекты с нуля.
+</div>
 
 ---
 
-## 🚀 Быстрый старт (Установка за 1 минуту)
+## 🎯 Why AI Yak Harness?
 
-### Вариант 1. Автоматический запуск напрямую из папки `ai-yak-harness` (Рекомендуется)
-Находясь в любом целевом проекте (например, `cd /Users/borissmiyan/Work/AppDev/voicefin` или `bible-challenge`):
+AI coding assistants (Cursor Composer, Claude Code, Google Antigravity, GitHub Copilot, Aider) are extraordinarily fast at generating code. But when working on production codebases, they suffer from **five fundamental failure modes**:
+
+1. **🧪 Test Tampering:** When AI breaks code, it frequently "fixes" the problem by modifying or weakening the assertions in existing tests (`expect(true).toBe(true)`), giving you a false sense of security.
+2. **💥 Refactoring Itch & Diff Bloat:** The model sees working code around the change and tries to "improve" it, bloating diffs into thousands of lines and deleting subtle edge-case handling.
+3. **📦 Package Hallucinations:** AI silently injects unvetted npm packages into `dependencies`, creating severe supply-chain risks.
+4. **💧 Silent Resource & Memory Leaks:** AI generates `URL.createObjectURL()` without `revokeObjectURL()`, forgets cleanup in `useEffect()`, and creates unbounded re-renders by omitting `React.memo` on list items.
+5. **📜 Contract & Schema Drift:** Silent modifications to database models, RPC contracts, or shared interfaces without corresponding migration steps.
+
+> ### ⚡ The Core Axiom
+> **"A prompt is a soft recommendation. A harness is a deterministic hard gate."**  
+> If a rule is critical to your system's stability, it must be enforced by a **failing script, compiler check, or Git pre-commit barrier (exit code 1)** — never by a polite sentence in markdown.
+
+---
+
+## 🚀 Quick Start (1-Minute Installation)
+
+You can install the harness into any existing TypeScript / React / Node.js project with a single command:
 
 ```bash
-# Запуск инсталлятора из центрального репозитория
-node /Users/borissmiyan/Work/AppDev/ai-yak-harness/setup.mjs .
-```
+# Option 1: Direct 1-click execution via npx
+npx github:borissmiyan/ai-yak-harness .
 
-### Вариант 2. Копирование в проект
-```bash
-cp -r "/Users/borissmiyan/Work/AppDev/ai-yak-harness" ./templates/ai-yak-harness
+# Option 2: Clone and run locally
+git clone https://github.com/borissmiyan/ai-yak-harness.git ./templates/ai-yak-harness
 node ./templates/ai-yak-harness/setup.mjs .
 ```
 
-Установщик автоматически:
-- Скопирует проверочные скрипты в `scripts/` (включая stress runner, silent reporter, schema drift gate, worktree manager).
-- Настроит Git-хуки в `.husky/` (`pre-commit`, `pre-push`).
-- Развернет CI Quality Gate в `.github/workflows/ci-quality-gate.yml`.
-- Установит скилл Сомневающегося Агента в `.agents/skills/adversarial-critic/SKILL.md`.
-- Установит шаблоны `knip.json`, `tsconfig.test.json`, `stryker.config.mjs`, `configs/eslint.config.harness.js`, `src/test/setup.ts`, `src/utils/security.ts`.
-- Установит конфигурационные сниппеты (`vite.config.snippet.ts`, `react-scan.snippet.ts`, `playwright.config.snippet.ts`, `vitest.config.snippet.ts`).
-- Установит Playwright E2E тесты (`e2e/07-memory-leak-hygiene.spec.ts`, `e2e/08-visual-regression.spec.ts`).
-- Аккуратно пропишет все 19 команд в `package.json` (`check:hygiene`, `check:memo`, `check:circular`, `check:dead-code`, `check:schema-drift`, `build:analyze`, `harness:worktree`, `test:flaky`, `test:silent`, `test:mutate`, `check:security:snyk`, `verify:remote`, `harness:rollback`, `prepare`, `lint-staged`).
-- Создаст или обновит `AGENTS.md` правилами 5-этапного цикла и политикой On-Demand.
+### What the installer configures automatically:
+- 🛡️ **Scripts (`scripts/`):** Diff budget guard, anti-test-tampering gate, leak hygiene scanner, memoization checker, no-secrets scanner, schema drift gate.
+- 🪝 **Git Hooks (`.husky/`):** Pre-commit and pre-push barriers that block invalid commits before they leave the machine.
+- 🚦 **CI Quality Gate (`.github/workflows/ci-quality-gate.yml`):** Zero-trust GitHub Actions workflow running on a pristine VM.
+- 🧠 **Adversarial Critic Skill (`.agents/skills/adversarial-critic/`):** Devil's advocate prompt protocol running a 7-filter audit before any code modification.
+- 📋 **ADR Architecture Framework (`.planning/decisions/`):** Context tracking and Decision Record templates.
+- 📦 **NPM Scripts (`package.json`):** Adds unified verification commands (`npm run check`, `check:hygiene`, `check:memo`, `check:schema-drift`, `verify:remote`).
 
-### Следующий шаг: Установка зависимостей верификации
+### Install peer verification dependencies:
 ```bash
 npm i -D husky lint-staged knip dpdm eslint-plugin-sonarjs eslint-plugin-promise rollup-plugin-visualizer @stryker-mutator/core @stryker-mutator/vitest-runner snyk react-scan
 npm run prepare
 ```
 
-### Промпт для ИИ-агента
-Скопируйте текст из [AGENT_BOOTSTRAP_PROMPT.md](./AGENT_BOOTSTRAP_PROMPT.md) и отправьте вашему агенту.
-
 ---
 
-## 🏛️ 8 Эшелонов Обороны (8 Pillars of AI Yak Harness)
+## 🏛️ The 8 Defense Pillars
 
 ```
-[Эшелон 1: Prompt & Roles]      ──► AGENTS.md, 5-этапный цикл, Adversarial Critic Gate (7 фильтров)
-         │
-[Эшелон 2: AST, Types & Sonar]  ──► noUncheckedIndexedAccess, tsconfig.test.json, ESLint AST (No Emoji, FSD, SonarJS, Promise)
-         │
-[Эшелон 3: Pre-Commit & Drift]  ──► Anti-Tampering, Dependency Freeze, Diff Budget, Secrets, Hygiene, Memoization, Schema Drift
-         │
-[Эшелон 4: Hermetic Tests & VM] ──► Hermetic Tests (UTC, Zero Unmocked Network), Flaky Hunter, Silent Reporter
-         │
-[Эшелон 5: E2E Leak & Visual]   ──► Playwright Heap Profiler (<40MB delta), Visual Layout Stability (<5% diff)
-         │
-[Эшелон 6: Remote CI Gate]      ──► GitHub Actions: полный прогон на чистой виртуальной машине
-         │
-[Эшелон 7: Sandbox Isolation]   ──► Ephemeral Git Worktree Manager (scripts/harness-worktree.mjs)
-         │
-[Эшелон 8: On-Demand Deep QA]   ──► Stryker Mutation CLI & Snyk Security Scanner (строго On-Demand)
+┌────────────────────────────────────────────────────────────────────────┐
+│  PILLAR 1: Prompt & Role Governance (AGENTS.md & Adversarial Critic)   │
+│  7-filter adversarial audit. Code generation is BLOCKED until APPROVED.│
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼────────────────────────────────────┐
+│  PILLAR 2: Static AST, Strict Types & Sonar Linting                   │
+│  noUncheckedIndexedAccess, tsconfig.test.json, No raw emojis in JSX   │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼────────────────────────────────────┐
+│  PILLAR 3: Pre-Commit Hard Gates (Pre-commit hook)                    │
+│  Anti-Tampering • Diff Budget (<450 lines) • Leak Hygiene • No Secrets │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼────────────────────────────────────┐
+│  PILLAR 4: Hermetic & Deterministic Testing (Vitest)                  │
+│  UTC timezone locked, unmocked network blocked, seed PRNG fixtures    │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼────────────────────────────────────┐
+│  PILLAR 5: E2E Leak Profiler & Layout Stability (Playwright)          │
+│  CDP Heap delta < 40MB, Visual regression tolerance < 5%              │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼────────────────────────────────────┐
+│  PILLAR 6: Remote CI Quality Gate (GitHub Actions)                    │
+│  Deterministic run on clean VM, mandatory status check before merge   │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼────────────────────────────────────┐
+│  PILLAR 7: Ephemeral Sandboxes (Git Worktree Manager)                 │
+│  Isolated branches for risky multi-file agent explorations            │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+┌───────────────────────────────────▼────────────────────────────────────┐
+│  PILLAR 8: On-Demand Deep QA (Stryker CLI & Snyk Scanner)             │
+│  Mutation testing & CVE vulnerability scanning strictly on-demand      │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## ⚠️ Политика On-Demand для Stryker CLI и Snyk
+## 🧰 Verification Tooling & Human Overrides
 
-> **ЖЕСТКОЕ ПРАВИЛО:**
-> 1. Инструменты мутационного тестирования (`npm run test:mutate` / Stryker CLI) и сканирования уязвимостей (`npm run check:security:snyk` / Snyk) **СТРОГО ЗАПРЕЩЕНО** запускать автоматически в pre-commit, `npm run check`, `npm run build` или при общих командах разработчика («давай», «делай», «погнали»).
-> 2. Агент **только напоминает** разработчику, что при необходимости глубокой проверки он может запустить Stryker CLI или Snyk.
-> 3. Запуск инициируется **ТОЛЬКО** по прямой однозначной команде:
->    - «запусти Stryker CLI» (или «запусти мутационные тесты»)
->    - «запусти Snyk» (или «запусти проверку Snyk»)
+Every gate in AI Yak Harness is deterministic and fails with `exit 1`. However, **human engineers maintain total control** via explicit environment flags or inline annotations:
 
-> [!NOTE]
-> **Практические нюансы On-Demand инструментов:**
-> - **Snyk:** Для первого запуска сканирования требуется один раз привязать бесплатный аккаунт через консоль: `npx snyk auth`.
-> - **Stryker:** В файле `stryker.config.mjs` массив `mutate` рекомендуется настраивать точечно на ключевые файлы критической бизнес-логики (математика, биллинг, криптография), чтобы избежать получасовых мутационных прогонов по второстепенным UI-компонентам.
-
----
-
-## 📦 Каталог Инструментов Харнесса
-
-### 1. Скрипты Верификации (`scripts/`)
-
-| Скрипт | Назначение | Как обойти человеку |
+| Script / Gate | What It Enforces / Blocks | Human Override Mechanism |
 | :--- | :--- | :--- |
-| `verify-no-test-tampering.mjs` | Блокирует изменение существующих тестов, ослабление `package.json` и самовольное добавление `dependencies` (Dependency Freeze Gate) | `ALLOW_TEST_MUTATION=true` / `ALLOW_DEP_MUTATION=true` |
-| `verify-diff-budget.mjs` | Ограничивает дифф до 450 строк и 10 файлов за коммит | `ALLOW_LARGE_DIFF=true` |
-| `verify-no-secrets.mjs` | Сканирует коммит на Supabase Service Keys, AWS/R2 ключи, приватные токены | Удалить секрет из диффа |
-| `verify-resource-hygiene.mjs` | Ищет утечки памяти (`createObjectURL` без `revoke`, `addEventListener`, таймеры) | `// @resource-hygiene-ignore: <причина>` |
-| `verify-design-system.mjs` | Hard Gate & Auto-Fixer: COMPONENTS.md, 96px TMA, WCAG 2.1 AA контраст, эмодзи (`--fix`) | `// @design-gate-ignore: <причина>` |
-| `export-design-tokens.mjs` | Token-to-Code: экспорт 9 стилей в Tailwind v4 `@theme` и TypeScript-токены | — |
-| `scaffold-ui-kit.mjs` | UI-Kit Scaffolder: генерация Button, Input, Badge, Card, SpringSheet со всеми 6 состояниями | — |
-| `generate-design-showcase.mjs` | Instant Showcase: генерация `design-showcase.html` с интерактивным тестером пружины | — |
-| `verify-memoization.mjs` | Контролирует `React.memo` на всех карточках и строках списков | `// @memo-gate-ignore: <причина>` |
-| `verify-no-circular.mjs` | Предотвращает циклические импорты и `undefined` при старте | `ALLOW_CIRCULAR=true` |
-| `verify-schema-drift.mjs` | Предотвращает несанкционированный дрейф контрактов БД и RPC типов | `ALLOW_SCHEMA_MUTATION=true` |
-| `harness-worktree.mjs` | Управляет изолированными песочницами агентов через ephemeral `git worktree` | — |
-| `test-flaky.mjs` | Стресс-раннер: прогоняет тесты 3+ раза подряд для отлова race conditions | — |
-| `silent-reporter.mjs` | Репортер для Vitest: 1 строка при успехе, подробный стек при сбое (защита контекста LLM) | — |
-| `verify-remote-ci.mjs` | Опрашивает GitHub API / CLI и валидирует удаленный CI Quality Gate | — |
-| `harness-rollback.mjs` | Безопасный откат рабочего дерева в Git Stash с временной меткой при тупике агента | — |
-| `pre-push.sh` | Ступенчатый шелл-гейт перед отправкой ветки на удаленный сервер | — |
-
-### 2. Конфигурации и Контракты (`configs/`)
-
-| Файл | Назначение |
-| :--- | :--- |
-| `knip.json` | Детектор мертвого кода, неиспользуемых экспортов и типов (устраняет Context Rot) |
-| `tsconfig.test.json` | Включает файлы тестов в строгую проверку типов (`tsc -b`) |
-| `stryker.config.mjs` | Конфигурация мутационного тестирования Stryker с Vitest runner (On-Demand) |
-| `eslint.config.harness.js` | AST-правила: запрет сырых эмодзи в JSX, FSD Layer Boundaries, лимит 500 строк, SonarJS (дубликаты условий/веток), Promise правила |
-| `vite.config.snippet.ts` | Готовый сниппет подключения `rollup-plugin-visualizer` (Pillar 3) |
-| `react-scan.snippet.ts` | Готовый сниппет подключения визуального профайлера `react-scan` в DEV режиме (Pillar 8) |
-| `playwright.config.snippet.ts`| Готовый сниппет настройки Playwright для тестов утечек памяти и визуальной регрессии |
-| `vitest.config.snippet.ts` | Готовый сниппет настройки герметичной среды Vitest (UTC, setupFiles) |
-
-### 3. Герметичное Тестирование и E2E Спецификации (`test/` и `e2e/`)
-
-| Файл | Назначение |
-| :--- | :--- |
-| `test/setup.ts` | Герметичная тестовая среда: фиксация `process.env.TZ = 'UTC'`, Zero Unmocked Network Gate |
-| `test/fixtures/deterministicFixtureFactory.ts` | Фабрика моковых данных на базе детерминированного 32-битного PRNG Mulberry32 |
-| `test/examples/adrArchitecturalInvariants.test.ts` | Шаблон тестов архитектурных инвариантов (ADR-as-Code) |
-| `test/examples/semanticContractFreeze.test.ts` | Шаблон фиксации структуры интерфейсов и RPC через `expectTypeOf` |
-| `test/examples/mutationTesting.test.ts` | Шаблон синтетического мутационного тестирования (отстрел "тестов-иллюзий") |
-| `e2e/07-memory-leak-hygiene.spec.ts` | E2E Playwright тест: контроль утечек JS Heap через CDP (`HeapProfiler.collectGarbage`) |
-| `e2e/08-visual-regression.spec.ts` | E2E Playwright тест: визуальная регрессия и контроль геометрии Layout |
-
-### 4. Архитектура, ADR и Контекст (`templates/planning/`)
-
-| Шаблон | Назначение |
-| :--- | :--- |
-| `templates/planning/CONTEXT.md` | Единый источник правды: стек, текущий статус, структура сущностей и реестр принятых решений. |
-| `templates/planning/decisions/TEMPLATE.md` | Стандартный шаблон Architecture Decision Record (Status, Context, Decision, Invariants, Consequences). |
-| `templates/planning/decisions/D-01-initial-architecture.md` | Базовое архитектурное решение (D-01): 5-этапный цикл, изоляция сетей, immutable-тесты. |
-
-### 5. Локальные правила поддиректорий (`templates/rules/scoped/`)
-
-| Шаблон | Назначение (Lazy Loading для агента) |
-| :--- | :--- |
-| `services-AGENTS.md` | Правила для `src/services/`: офлайн-отказоустойчивость, тайм-ауты, кэш, изоляция от React UI. |
-| `ui-AGENTS.md` | Правила для `src/shared/ui/`: токены дизайна, тач-таргеты, запрет сырых эмодзи, геометрия. |
-| `features-AGENTS.md` | Правила для `src/features/`: модульная изоляция фич, запрет спагетти кросс-импортов. |
-| `types-AGENTS.md` | Правила для `src/types/`: строгая типизация, ноль `any`, семантическая фиксация DTO. |
-| `db-AGENTS.md` | Правила для `src/db/` или `supabase/`: неизменяемые миграции, индексы, RLS изоляция. |
-| `utils-AGENTS.md` | Правила для `src/utils/`: детерминированные чистые функции, 100% юнит-покрытие. |
-
-### 6. Полный боевой комплект скиллов (`skills/`)
-
-| Скилл | Назначение |
-| :--- | :--- |
-| `adversarial-critic` | «Сомневающийся Агент / Адвокат Дьявола»: 7 фильтров состязательного допроса плана. Код заблокирован до `APPROVED`. |
-| `brainstorming` | Исследование замысла, поиск развилок и ограничений перед проектированием кода. |
-| `writing-plans` | Пошаговое планирование (TDD micro-steps 2–5 мин) с оценкой Diff Budget (< 450 строк). |
-| `codebase-audit` | Глубокий аудит на утечки памяти, лишние ре-рендеры, антипаттерны `useEffect` и технический долг. |
-| `verification-before-completion` | Жесткий протокол: запрет отчета о готовности без реальных доказательств с 0 ошибок. |
-| `test-driven-development` | Классический цикл Red-Green-Refactor для минимизации багов и соблюдения инвариантов. |
-| `design-system-creator` | Автоматическое ведение и актуализация реестров дизайн-системы и компонентов. |
-
-### 7. Реестры документации и дизайн-системы (`templates/docs/`)
-
-| Документ | Назначение |
-| :--- | :--- |
-| `templates/docs/PURPOSE.md` | Продуктовая миссия, целевая аудитория, ключевые боли и критерии успеха. |
-| `templates/docs/DESIGN-AI.md` | Машиночитаемые правила токенов дизайна (типографика, цвета, радиусы, правила для ИИ). |
-| `templates/docs/COMPONENTS.md` | Плоский реестр компонентов (Flat Component Registry): обязателен для проверки агентом во избежание дубликатов. |
-| `templates/docs/ANTIPATTERNS.md` | Живая база запрещённых антипаттернов проекта (❌ WRONG vs ✅ CORRECT). |
-
-### 5. Безопасность (`utils/`)
-
-| Файл | Назначение |
-| :--- | :--- |
-| `utils/security.ts` | Защитные функции на базе DOMPurify: `sanitizeSvg` (защита от Stored XSS через SVG), `sanitizeHtml`, `isSafeUrl` (блокировка executable protocols `javascript:`, `vbscript:`, data-HTML payloads). |
+| `verify-no-test-tampering.mjs` | Blocks editing existing tests (`*.test.*`, `*.spec.*`) and adding unauthorized `dependencies` | `ALLOW_TEST_MUTATION=true`<br>`ALLOW_DEP_MUTATION=true` |
+| `verify-diff-budget.mjs` | Limits changes to max **450 lines** and **10 files** per commit to prevent runaway refactoring | `ALLOW_LARGE_DIFF=true` |
+| `verify-no-secrets.mjs` | Blocks accidental commits of API tokens, private keys, Supabase Service Role keys | Remove secret from commit diff |
+| `verify-resource-hygiene.mjs` | Blocks `createObjectURL` without `revoke`, missing listener cleanups, unhandled intervals | `// @resource-hygiene-ignore: <reason>` |
+| `verify-memoization.mjs` | Enforces `React.memo` on all list items and cards (`*Card`, `*Row`, `*Item`) | `// @memo-gate-ignore: <reason>` |
+| `verify-no-circular.mjs` | Detects circular imports causing runtime `undefined` initialization bugs | `ALLOW_CIRCULAR=true` |
+| `verify-schema-drift.mjs` | Prevents uncommitted or drifting DB schemas and RPC contracts | `ALLOW_SCHEMA_MUTATION=true` |
+| `verify-security-antipatterns.mjs` | Catches dangerous `eval()`, unescaped `innerHTML`, and untrusted protocols | Fix vulnerability |
 
 ---
 
-## 📜 Условия Лицензии (License Terms)
+## 🤖 Supported AI Environments
 
-Проект распространяется под лицензией **[Yak Free Commercial & Non-Standalone Resale License (YAK-FCU-1.0)](./LICENSE)**:
+AI Yak Harness works seamlessly across all modern AI developer setups:
 
-1. **100% Бесплатно для любых проектов (включая коммерческие):**  
-   Вы имеете полное право свободно и бесплатно использовать, модифицировать и интегрировать этот харнесс в любые личные и коммерческие приложения, закрытые корпоративные базы данных, SaaS-платформы и клиентские системы. Никаких роялти, скрытых платежей или требований открывать ваш закрытый код.
-2. **Строгий запрет продажи отдельным продуктом (No Standalone Resale):**  
-   Категорически запрещено продавать, перепродавать, сублицензировать или монетизировать данный харнесс (или его производные) как самостоятельный коммерческий продукт, платный boilerplate/шаблон, платный курс или отдельную платную услугу, где главным объектом продажи является сам харнесс.
+- **Cursor IDE:** Add rules to `.cursorrules` or `.cursor/rules/`.
+- **Claude Code:** Add instructions to `CLAUDE.md`.
+- **Google Antigravity:** Full support via `AGENTS.md` and native skills in `.agents/skills/`.
+- **GitHub Copilot / Workspace:** Works transparently via Git hooks and CI quality gates.
+- **Aider / Codex:** Enforced automatically at the Git commit level.
 
 ---
 
-## ❤️ Монетизация доброй воли (Goodwill Support)
+## 📊 Production-Proven Results
 
-Этот инженерный харнесс распространяется бесплатно, чтобы разработчики могли создавать надёжные, защищённые от регрессий и автономные ИИ-пайплайны без бюрократии.
+AI Yak Harness was forged and validated in real-world mission-critical production:
 
-Если `ai-yak-harness` сберёг вашей команде десятки часов отладки, помог поймать критические утечки памяти или ускорил запуск вашего продукта — вы можете поддержать развитие проекта:
+- **1,159 / 1,159 tests passing** in golden reference testing suites.
+- **267 automated findings detected and resolved** during initial codebase audit.
+- **0 unmocked network leaks** in hermetic test environments.
+- **0 regressions** allowed past the Pre-Commit + Remote CI Quality Gate pipeline.
 
-* ⭐ **Поставьте звезду репозиторию** на GitHub (помогает алгоритмам и сообществу)
-* ☕ **[Поддержать на GitHub Sponsors](https://github.com/sponsors/borissmiyan)** — любая сумма на кофе или регулярная поддержка
-* 📢 **Расскажите о проекте** в X (Twitter), LinkedIn или профильных сообществах
-* 💼 **Архитектурный консалтинг и внедрение:** обратная связь через `primeapps.info@gmail.com`
+---
+
+## 📜 License (YAK-FCU-1.0)
+
+Distributed under the **[Yak Free Commercial & Non-Standalone Resale License (YAK-FCU-1.0)](./LICENSE)**:
+
+1. **100% Free for All Projects (Including Commercial):**  
+   You are free to use, modify, and integrate this harness into any personal project, open-source software, proprietary enterprise application, client delivery, or commercial SaaS platform without royalties.
+2. **No Standalone Resale:**  
+   You may **not** sell, sublicense, or monetize this harness (or derivatives of it) as a standalone commercial product, paid boilerplate, or paid course where the harness itself is the primary item being sold.
+
+---
+
+## ❤️ Community & Support
+
+- ⭐ **Star this repository** on GitHub to help other engineers discover deterministic AI testing.
+- ☕ **[Sponsor on GitHub](https://github.com/sponsors/borissmiyan)** to support ongoing maintenance and new gates.
+- 📢 Follow and share on **[X (Twitter)](https://twitter.com/borissmiyan)**.
+- 💼 Inquiries & Architecture consulting: `primeapps.info@gmail.com`

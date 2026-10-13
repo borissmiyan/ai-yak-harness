@@ -26,7 +26,7 @@ description: "Use when you have a spec or requirements for a multi-step task, be
 
 > **Статус:** [DRAFT | UNDER_AUDIT | APPROVED]  
 > **Стек:** React 18, TypeScript 5.9, Vite 7, Vitest, Dexie.js, Supabase, Tailwind CSS v4  
-> **Связанные ADR:** [ADR D-XX](file:///Users/borissmiyan/Work/AppDev/Father%20Work%20Database/.planning/decisions/D-XX.md)  
+> **Связанные ADR:** [ADR D-XX](.planning/decisions/D-XX.md)  
 > **Оценка Diff Budget:** ~XXX строк кода, Y файлов (Лимит: 450 строк / 10 файлов)  
 
 ### Цель и Архитектура
@@ -42,7 +42,7 @@ description: "Use when you have a spec or requirements for a multi-step task, be
 
 ## Обязательный шлюз: Состязательный аудит (Adversarial Audit Gate)
 
-Перед тем как приступить к написанию кода по плану, план **ОБЯЗАН** пройти состязательный аудит по протоколу [`.agents/skills/adversarial-critic/SKILL.md`](file:///Users/borissmiyan/Work/AppDev/Father%20Work%20Database/.agents/skills/adversarial-critic/SKILL.md).
+Перед тем как приступить к написанию кода по плану, план **ОБЯЗАН** пройти состязательный аудит по протоколу [`.agents/skills/adversarial-critic/SKILL.md`](.agents/skills/adversarial-critic/SKILL.md).
 
 В документе плана обязательно фиксируется блок аудита:
 
