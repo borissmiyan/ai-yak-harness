@@ -31,11 +31,23 @@ echo " AI-SLOP PATTERN SCAN"
 echo " Target: $TARGET"
 echo "=============================="
 
+EXCLUDE_OPTS="--exclude-dir=.agent --exclude-dir=.agents --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=build --exclude-dir=.git --exclude-dir=backups --exclude-dir=scratch --exclude-dir=graphify-out --exclude-dir=e2e"
+if [ -n "${AUDIT_EXTRA_EXCLUDES:-}" ]; then
+  for extra_dir in $AUDIT_EXTRA_EXCLUDES; do
+    EXCLUDE_OPTS="$EXCLUDE_OPTS --exclude-dir=$extra_dir"
+  done
+fi
+
 # Setup Markdown Reporting
-REPORT_DIR="docs/codebase-audit"
-mkdir -p "$REPORT_DIR"
+if [ -d "$TARGET/.agent/audit" ]; then
+  REPORT_DIR="$TARGET/.agent/audit"
+elif [ -d ".agent/audit" ]; then
+  REPORT_DIR=".agent/audit"
+else
+  REPORT_DIR="/tmp"
+fi
 DATE=$(date +%Y-%m-%d)
-REPORT_FILE="$REPORT_DIR/audit-$DATE.md"
+REPORT_FILE="$REPORT_DIR/ai_slop_report.md"
 
 {
   echo "# 🛡️ Codebase Audit Report — $DATE"
@@ -96,7 +108,7 @@ echo "## 🔍 Findings" >> "$REPORT_FILE"
 echo ""
 echo -e "${RED}🔴 CRITICAL: useCallback/useMemo called inside JSX${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.tsx' -E '\{\s*(useCallback|useMemo)\(' "$TARGET" 2>/dev/null | grep -v 'node_modules' || true)
+RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS -E '\{\s*(useCallback|useMemo)\(' "$TARGET" 2>/dev/null || true)
 print_or_ok "$RES" "✅ No hooks in JSX found"
 log_finding "Hooks inside JSX (Rule of Hooks Violation)" "$RES"
 
@@ -118,7 +130,7 @@ while IFS= read -r file; do
       RES="${RES}${MSG}"$'\n'
     fi
   fi
-done < <(find "$TARGET" -name "*.tsx" -not -path '*/node_modules/*')
+done < <(find "$TARGET" -name "*.tsx" ! -path '*/__tests__/*' ! -name '*.test.*' ! -name '*.spec.*' ! -path '*/.agent/*' ! -path '*/.agents/*' ! -path '*/node_modules/*' ! -path '*/dist/*' ! -path '*/build/*' ! -path '*/.git/*' ! -path '*/backups/*' ! -path '*/scratch/*' ! -path '*/graphify-out/*')
 [ -z "$RES" ] && echo "  ✅ No hooks-after-return violations found"
 log_finding "Hooks after Early Returns" "$RES"
 
@@ -126,9 +138,9 @@ log_finding "Hooks after Early Returns" "$RES"
 echo ""
 echo -e "${RED}🔴 CRITICAL: JSON.stringify used for object comparison${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.ts' --include='*.tsx' \
+RES=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS \
   -E 'JSON\.stringify\(.+\)\s*(===|!==)\s*JSON\.stringify' \
-  "$TARGET" 2>/dev/null | grep -v 'node_modules' | grep -v '.test.' || true)
+  "$TARGET" 2>/dev/null | grep -v '.test.' || true)
 print_or_ok "$RES" "✅ No JSON.stringify comparison found"
 log_finding "JSON.stringify Comparisons" "$RES"
 
@@ -136,9 +148,9 @@ log_finding "JSON.stringify Comparisons" "$RES"
 echo ""
 echo -e "${RED}🔴 CRITICAL: useEffect that only calls setState (derived state)${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.tsx' --include='*.ts' \
+RES=$(grep -rn --include='*.tsx' --include='*.ts' $EXCLUDE_OPTS \
   -B1 -A3 'useEffect.*=>' \
-  "$TARGET" 2>/dev/null | grep -v 'node_modules' | grep -v '.test.' | \
+  "$TARGET" 2>/dev/null | grep -v '.test.' | \
   grep -E 'set[A-Z]\w+\(' | head -20 || true)
 print_or_ok "$RES" "✅ No derived-state useEffect found"
 log_finding "Derived State useEffect" "$RES"
@@ -151,7 +163,7 @@ echo "  trust a clean result here on its own."
 echo ""
 echo -e "${RED}🔴 CRITICAL: 'as unknown as' double type cast${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.ts' --include='*.tsx' 'as unknown as' "$TARGET" 2>/dev/null | grep -v 'node_modules' | grep -v '.test.' || true)
+RES=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS 'as unknown as' "$TARGET" 2>/dev/null | grep -v '.test.' || true)
 print_or_ok "$RES" "✅ No double casts found"
 log_finding "Double Type Casts" "$RES"
 
@@ -159,7 +171,7 @@ log_finding "Double Type Casts" "$RES"
 echo ""
 echo -e "${YELLOW}🟡 WARNING: Local State for Global Modals${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.tsx' -E 'const \[.*(Modal|Dialog|Sheet).*, set.*\] = useState' "$TARGET" 2>/dev/null | grep -v 'node_modules' | head -10 || true)
+RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS -E 'const \[.*(Modal|Dialog|Sheet).*, set.*\] = useState' "$TARGET" 2>/dev/null | head -10 || true)
 print_or_ok "$RES" "✅ Modals seem managed globally."
 log_finding "Local Modal State" "$RES"
 
@@ -167,7 +179,7 @@ log_finding "Local Modal State" "$RES"
 echo ""
 echo -e "${RED}🔴 CRITICAL: Database Overfetching (select('*'))${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.ts' --include='*.tsx' -E "\.select\(\s*['\"]\s*\*\s*['\"]\s*\)" "$TARGET" 2>/dev/null | grep -v 'node_modules' | head -10 || true)
+RES=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS -E "\.select\(\s*['\"]\s*\*\s*['\"]\s*\)" "$TARGET" 2>/dev/null | head -10 || true)
 print_or_ok "$RES" "✅ No select('*') found"
 log_finding "Database Overfetching" "$RES"
 
@@ -175,7 +187,7 @@ log_finding "Database Overfetching" "$RES"
 echo ""
 echo -e "${YELLOW}🟡 WARNING: Missing abortSignal in API Service${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.ts' --include='*.tsx' -E "export const .* = async \(.*\) => \{" "$TARGET" 2>/dev/null | grep -v 'abortSignal' | grep -v 'node_modules' | head -10 || true)
+RES=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS -E "export const .* = async \(.*\) => \{" "$TARGET" 2>/dev/null | grep -v 'abortSignal' | head -10 || true)
 print_or_ok "$RES" "✅ API services seem to handle abortSignal"
 log_finding "Missing AbortSignal support" "$RES"
 
@@ -183,7 +195,7 @@ log_finding "Missing AbortSignal support" "$RES"
 echo ""
 echo -e "${YELLOW}🟡 WARNING: Possibly unchecked empty array in .in()${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.ts' --include='*.tsx' -E "\.in\(\s*['\"][\w]+['\"]\s*,\s*\w+\)" "$TARGET" 2>/dev/null | grep -v 'node_modules' | head -15 || true)
+RES=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS -E "\.in\(\s*['\"][\w]+['\"]\s*,\s*\w+\)" "$TARGET" 2>/dev/null | head -15 || true)
 print_or_ok "$RES" "✅ No .in() calls with a bare variable argument found"
 log_finding "Possibly Unchecked Empty .in() Array" "$RES"
 
@@ -191,7 +203,7 @@ log_finding "Possibly Unchecked Empty .in() Array" "$RES"
 echo ""
 echo -e "${RED}🔴 CRITICAL: Ad-hoc Hex Colors${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.tsx' "text-\[#[0-9a-fA-F]*\]\|bg-\[#[0-9a-fA-F]*\]" "$TARGET" 2>/dev/null | grep -v 'node_modules' | head -10 || true)
+RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS "text-\[#[0-9a-fA-F]*\]\|bg-\[#[0-9a-fA-F]*\]" "$TARGET" 2>/dev/null | head -10 || true)
 print_or_ok "$RES" "✅ No ad-hoc hex colors found."
 log_finding "Ad-hoc Hex Colors" "$RES"
 
@@ -199,7 +211,7 @@ log_finding "Ad-hoc Hex Colors" "$RES"
 echo ""
 echo -e "${RED}🔴 CRITICAL: File Size Limit Exceeded (> 500 lines)${NC}"
 echo "-------------------------------"
-RES=$(find "$TARGET" -type f \( -name "*.ts" -o -name "*.tsx" \) -not -path "*/node_modules/*" -print0 \
+RES=$(find "$TARGET" -type f \( -name "*.ts" -o -name "*.tsx" \) ! -path '*/.agent/*' ! -path '*/.agents/*' ! -path '*/node_modules/*' ! -path '*/dist/*' ! -path '*/build/*' ! -path '*/.git/*' ! -path '*/backups/*' ! -path '*/scratch/*' ! -path '*/graphify-out/*' ! -name '*.test.*' -print0 2>/dev/null \
   | xargs -0 wc -l 2>/dev/null | awk '$1 > 500 && $2 != "total" {print $2 ": " $1 " lines"}' | head -10 || true)
 print_or_ok "$RES" "✅ All files are under 500 lines."
 log_finding "File Size Violations" "$RES"
@@ -208,7 +220,7 @@ log_finding "File Size Violations" "$RES"
 echo ""
 echo -e "${CYAN}📱 TMA: Missing expand/ready on init${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.tsx' --include='*.ts' 'Telegram\.WebApp' "$TARGET" 2>/dev/null | grep -E 'features|App.tsx' | grep -v 'ready(\|expand(' || true)
+RES=$(grep -rn --include='*.tsx' --include='*.ts' $EXCLUDE_OPTS 'Telegram\.WebApp' "$TARGET" 2>/dev/null | grep -E 'features|App.tsx' | grep -v 'ready(\|expand(' || true)
 print_or_ok "$RES" "✅ TMA init looks good."
 log_finding "TMA Initialization" "$RES"
 
@@ -216,7 +228,7 @@ log_finding "TMA Initialization" "$RES"
 echo ""
 echo -e "${RED}🔴 CRITICAL: Direct Zustand State Mutation${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.ts' --include='*.tsx' -E "state\.[a-zA-Z0-9_.]+\s*=" "$TARGET" 2>/dev/null | grep 'set(' | grep -v 'node_modules' || true)
+RES=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS -E "state\.[a-zA-Z0-9_.]+\s*=" "$TARGET" 2>/dev/null | grep 'set(' || true)
 print_or_ok "$RES" "✅ No direct mutations found"
 log_finding "Direct Object Mutation in Stores" "$RES"
 
@@ -224,7 +236,7 @@ log_finding "Direct Object Mutation in Stores" "$RES"
 echo ""
 echo -e "${RED}🔴 CRITICAL: Unmemoized Context Provider Value${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.tsx' -E '<.*\.Provider\s+value=\{\s*\{' "$TARGET" 2>/dev/null | grep -v 'node_modules' || true)
+RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS -E '<.*\.Provider\s+value=\{\s*\{' "$TARGET" 2>/dev/null || true)
 print_or_ok "$RES" "✅ Context providers seem to use memoized values"
 log_finding "Unmemoized Context Provider" "$RES"
 
@@ -232,7 +244,7 @@ log_finding "Unmemoized Context Provider" "$RES"
 echo ""
 echo -e "${RED}🔴 CRITICAL: Missing unsubscribe for Auth side-effects${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.ts' --include='*.tsx' 'onAuthStateChange' "$TARGET" 2>/dev/null | grep -v 'unsubscribe' | grep -v 'node_modules' || true)
+RES=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS 'onAuthStateChange' "$TARGET" 2>/dev/null | grep -v 'unsubscribe' || true)
 print_or_ok "$RES" "✅ Auth listeners seem managed"
 log_finding "Auth Listener Leaks" "$RES"
 
@@ -240,7 +252,7 @@ log_finding "Auth Listener Leaks" "$RES"
 echo ""
 echo -e "${YELLOW}🟡 WARNING: Naked UUID in JSX${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.tsx' -E '>\s*\{.*[iI]d\s*\}\s*<' "$TARGET" 2>/dev/null | grep -v 'node_modules' || true)
+RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS -E '>\s*\{.*[iI]d\s*\}\s*<' "$TARGET" 2>/dev/null || true)
 print_or_ok "$RES" "✅ No naked UUIDs found in JSX"
 log_finding "Naked UUIDs in UI" "$RES"
 
@@ -248,7 +260,7 @@ log_finding "Naked UUIDs in UI" "$RES"
 echo ""
 echo -e "${YELLOW}🟡 WARNING: Non-semantic onClick (onClick on Div/Span)${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.tsx' -E '<(div|span|p|section|article|li)\s+[^>]*onClick=' "$TARGET" 2>/dev/null | grep -v 'node_modules' | head -10 || true)
+RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS -E '<(div|span|p|section|article|li)\s+[^>]*onClick=' "$TARGET" 2>/dev/null | head -10 || true)
 print_or_ok "$RES" "✅ Clicking elements seem semantic"
 log_finding "Non-semantic Interaction" "$RES"
 
@@ -263,7 +275,7 @@ while IFS= read -r file; do
     echo "  $MSG"
     RES="${RES}${MSG}"$'\n'
   fi
-done < <(grep -rl --include='*.tsx' --include='*.ts' "addEventListener" "$TARGET" 2>/dev/null | grep -v 'node_modules')
+done < <(grep -rl --include='*.tsx' --include='*.ts' $EXCLUDE_OPTS "addEventListener" "$TARGET" 2>/dev/null)
 [ -z "$RES" ] && echo "  ✅ No event listener leaks found"
 log_finding "Event Listener Leaks" "$RES"
 
@@ -278,7 +290,7 @@ while IFS= read -r file; do
     echo "  $MSG"
     RES="${RES}${MSG}"$'\n'
   fi
-done < <(grep -rl --include='*.tsx' --include='*.ts' "setInterval" "$TARGET" 2>/dev/null | grep -v 'node_modules')
+done < <(grep -rl --include='*.tsx' --include='*.ts' $EXCLUDE_OPTS "setInterval" "$TARGET" 2>/dev/null)
 [ -z "$RES" ] && echo "  ✅ No interval leaks found"
 log_finding "Interval Leaks" "$RES"
 
@@ -286,7 +298,7 @@ log_finding "Interval Leaks" "$RES"
 echo ""
 echo -e "${YELLOW}🟡 PERF: Array index as key${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.tsx' 'key={index}' "$TARGET" 2>/dev/null || true)
+RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS 'key={index}' "$TARGET" 2>/dev/null || true)
 print_or_ok "$RES" "✅ No index-based keys found."
 log_finding "Index-based Keys" "$RES"
 
@@ -294,7 +306,7 @@ log_finding "Index-based Keys" "$RES"
 echo ""
 echo -e "${RED}🔴 PERF: Double JSON.stringify${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.ts' --include='*.tsx' 'JSON\.stringify(.*JSON\.stringify' "$TARGET" 2>/dev/null || true)
+RES=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS 'JSON\.stringify(.*JSON\.stringify' "$TARGET" 2>/dev/null || true)
 print_or_ok "$RES" "✅ No nested stringify found."
 log_finding "Nested JSON.stringify" "$RES"
 
@@ -304,7 +316,7 @@ echo -e "${YELLOW}🟡 WARNING: Generic variable names${NC}"
 echo "-------------------------------"
 RES=""
 for name in "const data " "const result " "const response " "const item " "const value "; do
-  COUNT=$(grep -rn --include='*.ts' --include='*.tsx' "$name" "$TARGET" 2>/dev/null | grep -v 'node_modules' | grep -v '.test.' | grep -v 'interface' | grep -v 'type ' | wc -l | tr -d ' ')
+  COUNT=$(grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS "$name" "$TARGET" 2>/dev/null | grep -v '.test.' | grep -v 'interface' | grep -v 'type ' | wc -l | tr -d ' ')
   if [ "$COUNT" -gt 5 ]; then
     MSG="⚠️  '$name' used ${COUNT} times — consider descriptive names"
     echo "  $MSG"
@@ -326,7 +338,7 @@ while IFS= read -r file; do
     echo "  $MSG"
     RES="${RES}${MSG}"$'\n'
   fi
-done < <(find "$TARGET" -name "*.tsx" -not -path '*/node_modules/*')
+done < <(find "$TARGET" -name "*.tsx" ! -path '*/__tests__/*' ! -name '*.test.*' ! -name '*.spec.*' ! -path '*/.agent/*' ! -path '*/.agents/*' ! -path '*/node_modules/*' ! -path '*/dist/*' ! -path '*/build/*' ! -path '*/.git/*' ! -path '*/backups/*' ! -path '*/scratch/*' ! -path '*/graphify-out/*')
 [ -z "$RES" ] && echo "  ✅ No form-state overuse found"
 log_finding "Form State Overuse" "$RES"
 
@@ -334,7 +346,7 @@ log_finding "Form State Overuse" "$RES"
 echo ""
 echo -e "${YELLOW}🟡 WARNING: Non-Standard Border Radii (rounded-md/lg)${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.tsx' "rounded-md\|rounded-lg" "$TARGET" 2>/dev/null | head -10 || true)
+RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS "rounded-md\|rounded-lg" "$TARGET" 2>/dev/null | head -10 || true)
 print_or_ok "$RES" "✅ Border radii follow design system."
 log_finding "Non-Standard Border Radii" "$RES"
 

@@ -90,8 +90,62 @@ fi
 : > "$RAW_LOG"
 : > "$HEALTH_LOG"
 
+CONFIG_PARSED="$AUDIT_DIR/.config_parsed.json"
+: > "$CONFIG_PARSED"
+
+# Parse .auditrc.json or .auditrc if present
+python3 - "$PROJECT_ROOT" "$CONFIG_PARSED" <<'PYEOF'
+import sys, os, json
+
+project_root, out_path = sys.argv[1], sys.argv[2]
+candidates = [
+    os.path.join(project_root, '.auditrc.json'),
+    os.path.join(project_root, '.auditrc')
+]
+config = {
+    'excludeDirs': [],
+    'disabledTools': [],
+    'severityOverrides': {},
+    'customChecks': [],
+    'failOn': 'CRITICAL',
+    'autoFixCommand': ''
+}
+for p in candidates:
+    if os.path.isfile(p):
+        try:
+            with open(p, 'r', errors='ignore') as f:
+                user_cfg = json.load(f)
+                if isinstance(user_cfg, dict):
+                    for k in config:
+                        if k in user_cfg:
+                            config[k] = user_cfg[k]
+                    print(f"Loaded audit configuration from {os.path.basename(p)}")
+            break
+        except Exception as e:
+            print(f"Warning: failed to read {p}: {e}", file=sys.stderr)
+
+try:
+    with open(out_path, 'w') as f:
+        json.dump(config, f, indent=2)
+except Exception:
+    pass
+PYEOF
+
+EXTRA_EXCLUDES=$(python3 -c "import json, os; p='$CONFIG_PARSED'; data = json.load(open(p)) if os.path.exists(p) else {}; print(' '.join(data.get('excludeDirs', [])))" 2>/dev/null || true)
+if [ -n "$EXTRA_EXCLUDES" ]; then
+  export AUDIT_EXTRA_EXCLUDES="$EXTRA_EXCLUDES"
+fi
+
 run_section() {
   local title="$1"; local scope="$2"; shift 2
+
+  if [ -f "$CONFIG_PARSED" ]; then
+    if python3 -c "import json, sys; d=json.load(open('$CONFIG_PARSED')); sys.exit(0 if '$title' in d.get('disabledTools', []) else 1)" 2>/dev/null; then
+      echo "  [$title] skipped (disabled in configuration)"
+      return 0
+    fi
+  fi
+
   echo "" >> "$RAW_LOG"
   echo "===SECTION::${title}===" >> "$RAW_LOG"
   local start_ts end_ts duration rc=0
@@ -111,22 +165,52 @@ run_section() {
 echo "Running full audit. Scope: $TARGET | Project root for AST tools: $PROJECT_ROOT"
 
 # --- Step 0.5: AST-based ground truth — always at PROJECT_ROOT ---
+# --- Step 0.5: AST-based ground truth — always at PROJECT_ROOT ---
 run_section "tsc-noEmit" "$PROJECT_ROOT" npx --no-install tsc --noEmit -p "$PROJECT_ROOT"
-run_section "ts-prune" "$PROJECT_ROOT" bash -c "cd '$PROJECT_ROOT' && npx --no-install ts-prune -p tsconfig.json"
-run_section "madge-circular" "$PROJECT_ROOT" bash -c "npx --no-install madge --circular --extensions ts,tsx '$PROJECT_ROOT' || [ \$? -eq 1 ]"
+
+# Circular dependency verification: use project's fast dpdm guard if present
+if [ -f "$PROJECT_ROOT/scripts/verify-no-circular.mjs" ]; then
+  run_section "verify_no_circular" "$PROJECT_ROOT" node "$PROJECT_ROOT/scripts/verify-no-circular.mjs"
+else
+  run_section "madge-circular" "$PROJECT_ROOT" bash -c "npx --no-install madge --circular --extensions ts,tsx '$PROJECT_ROOT' || [ \$? -eq 1 ]"
+fi
+
+# AST Security Anti-Patterns Gate (OWASP, RLS, IDOR, Secret Hygiene)
+if [ -f "$PROJECT_ROOT/scripts/verify-security-antipatterns.mjs" ]; then
+  run_section "verify_security_antipatterns" "$PROJECT_ROOT" node "$PROJECT_ROOT/scripts/verify-security-antipatterns.mjs"
+fi
+
+# Resource Hygiene & Memory Leak guard
+if [ -f "$PROJECT_ROOT/scripts/verify-resource-hygiene.mjs" ]; then
+  run_section "verify_resource_hygiene" "$PROJECT_ROOT" node "$PROJECT_ROOT/scripts/verify-resource-hygiene.mjs"
+fi
+
+# Component Memoization guard
+if [ -f "$PROJECT_ROOT/scripts/verify-memoization.mjs" ]; then
+  run_section "verify_memoization" "$PROJECT_ROOT" node "$PROJECT_ROOT/scripts/verify-memoization.mjs"
+fi
+
+# Schema Drift guard
+if [ -f "$PROJECT_ROOT/scripts/verify-schema-drift.mjs" ]; then
+  run_section "verify_schema_drift" "$PROJECT_ROOT" node "$PROJECT_ROOT/scripts/verify-schema-drift.mjs"
+fi
+
 # eslint is fine scoped to TARGET — config resolution walks up on its own.
 run_section "eslint" "$TARGET" bash -c 'npx --no-install eslint "$1" || [ $? -le 1 ]' _ "$TARGET"
-run_section "depcheck" "$PROJECT_ROOT" bash -c "npx --no-install depcheck '$PROJECT_ROOT' || [ \$? -eq 255 ]"
+
+if npx --no-install ts-prune --version >/dev/null 2>&1; then
+  run_section "ts-prune" "$PROJECT_ROOT" bash -c "cd '$PROJECT_ROOT' && npx --no-install ts-prune -p tsconfig.json"
+fi
+
+if npx --no-install depcheck --version >/dev/null 2>&1; then
+  run_section "depcheck" "$PROJECT_ROOT" bash -c "npx --no-install depcheck '$PROJECT_ROOT' || [ \$? -eq 255 ]"
+fi
+
+if command -v npm >/dev/null 2>&1; then
+  run_section "npm-audit" "$PROJECT_ROOT" bash -c "cd '$PROJECT_ROOT' && npm audit --json || [ \$? -le 1 ]"
+fi
 
 # --- Config sanity: is eslint-plugin-react-hooks actually wired in? ---
-# The regex heuristic in detect_ai_slop.sh ("Hook called after Early Return")
-# can produce a large number of matches on its own, with no way to tell the
-# person running the audit whether that count is trustworthy. The AST-based
-# eslint-plugin-react-hooks check is the authoritative source per this
-# skill's own rules — but if it isn't actually configured, an empty eslint
-# section looks identical to "checked and found nothing," which it is not.
-# Make the distinction explicit and mechanical instead of asking a human to
-# judge it.
 REACT_HOOKS_PLUGIN_STATUS="NOT DETECTED"
 for cfg in "$PROJECT_ROOT/eslint.config.js" "$PROJECT_ROOT/eslint.config.mjs" "$PROJECT_ROOT/eslint.config.cjs" "$PROJECT_ROOT/.eslintrc.js" "$PROJECT_ROOT/.eslintrc.json" "$PROJECT_ROOT/.eslintrc.cjs"; do
   if [ -f "$cfg" ] && grep -q "react-hooks" "$cfg" 2>/dev/null; then
@@ -141,33 +225,72 @@ run_section "detect_type_violations" "$TARGET" bash "$SCRIPT_DIR/detect_type_vio
 run_section "detect_performance_issues" "$TARGET" bash "$SCRIPT_DIR/detect_performance_issues.sh" "$TARGET"
 run_section "detect_antipatterns" "$TARGET" bash "$SCRIPT_DIR/detect_antipatterns.sh" "$TARGET"
 run_section "detect_ai_slop" "$TARGET" bash "$SCRIPT_DIR/detect_ai_slop.sh" "$TARGET"
+run_section "detect_security_vulnerabilities" "$TARGET" node "$SCRIPT_DIR/detect_security_vulnerabilities.mjs" "$TARGET"
+
+# --- Step 2.5: User-defined custom checks from .auditrc.json ---
+if [ -f "$CONFIG_PARSED" ]; then
+  while IFS='|' read -r c_name c_cmd; do
+    if [ -n "$c_name" ] && [ -n "$c_cmd" ]; then
+      run_section "$c_name" "$PROJECT_ROOT" bash -c "$c_cmd"
+    fi
+  done < <(python3 - "$CONFIG_PARSED" <<'PYEOF'
+import json, sys
+try:
+    data = json.load(open(sys.argv[1]))
+    for item in data.get('customChecks', []):
+        if isinstance(item, dict) and item.get('name') and item.get('cmd'):
+            print(f"{item['name']}|{item['cmd']}")
+except Exception:
+    pass
+PYEOF
+)
+fi
 
 # --- Mechanical checklist extraction ---
 CHECKLIST_TMP="$AUDIT_DIR/.checklist_tmp.txt"
 : > "$CHECKLIST_TMP"
 
-python3 - "$RAW_LOG" "$CHECKLIST_TMP" "$PROJECT_ROOT" <<'PYEOF'
-import re, sys, hashlib, os
+python3 - "$RAW_LOG" "$CHECKLIST_TMP" "$PROJECT_ROOT" "$CONFIG_PARSED" <<'PYEOF'
+import re, sys, hashlib, os, json
 
-raw_log, out_path, project_root = sys.argv[1], sys.argv[2], sys.argv[3]
+raw_log, out_path, project_root, config_path = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+project_root_abs = os.path.realpath(project_root)
 section = "unknown"
+sub_severity = "WARN"
 current_file = None
+current_sec_file = None
+
+cfg = {}
+if os.path.isfile(config_path):
+    try:
+        with open(config_path, 'r', errors='ignore') as cf:
+            cfg = json.load(cf)
+    except Exception:
+        pass
+
 patterns = [
-    re.compile(r'^(?P<file>[^\s:][^:]*\.(?:ts|tsx)):(?P<line>\d+):(?P<rest>.*)$'),
-    re.compile(r'^(?P<file>[^\s:(][^(]*\.(?:ts|tsx))\((?P<line>\d+),\d+\):\s*(?P<rest>.*)$'),
-    re.compile(r'^(?P<file>[^\s:][^:]*\.(?:ts|tsx)):\s*line\s+(?P<line>\d+),\s*col\s+\d+,\s*(?P<rest>.*)$'),
+    re.compile(r'^(?P<file>[^\s:][^:]*\.(?:ts|tsx|sql|js|mjs)):(?P<line>\d+):(?P<rest>.*)$'),
+    re.compile(r'^(?P<file>[^\s:(][^(]*\.(?:ts|tsx|sql|js|mjs))\((?P<line>\d+),\d+\):\s*(?P<rest>.*)$'),
+    re.compile(r'^(?P<file>[^\s:][^:]*\.(?:ts|tsx|sql|js|mjs)):\s*line\s+(?P<line>\d+),\s*col\s+\d+,\s*(?P<rest>.*)$'),
 ]
+
+EXCLUDED_DIR_NAMES = {'.agent', '.agents', 'node_modules', 'dist', 'build', '.git', 'backups', 'scratch', 'graphify-out', 'e2e'}
+for d in cfg.get('excludeDirs', []):
+    EXCLUDED_DIR_NAMES.add(d)
+
+severity_overrides = cfg.get('severityOverrides', {})
+custom_check_severities = {}
+for cc in cfg.get('customChecks', []):
+    if isinstance(cc, dict) and cc.get('name') and cc.get('severity'):
+        custom_check_severities[cc['name']] = cc['severity']
 
 def normalize_file_path(fpath):
     if not fpath:
         return None
-    # Reject foreign workspaces like voicefin
-    if 'voicefin' in fpath.lower():
-        return None
     # If absolute path, convert to relative to project_root
     if os.path.isabs(fpath):
         try:
-            rel = os.path.relpath(fpath, project_root)
+            rel = os.path.relpath(fpath, project_root_abs)
             if rel.startswith('..'):
                 return None
             fpath = rel
@@ -178,32 +301,139 @@ def normalize_file_path(fpath):
             fpath = fpath[2:]
         if fpath.startswith('../'):
             return None
-    # Check that file actually exists in project_root
-    full_path = os.path.join(project_root, fpath)
-    if not os.path.exists(full_path):
-        return None
-    return fpath
 
+    norm_path = os.path.normpath(fpath)
+    parts = set(norm_path.split(os.sep))
+    if parts & EXCLUDED_DIR_NAMES:
+        return None
+
+    # Check that file actually exists strictly inside project_root
+    full_path = os.path.realpath(os.path.join(project_root_abs, norm_path))
+    if not full_path.startswith(project_root_abs + os.sep) or not os.path.exists(full_path):
+        return None
+    return norm_path
+
+def check_audit_ignore(rel_path, line_no):
+    if not line_no:
+        return None
+    try:
+        ln_idx = int(line_no)
+    except ValueError:
+        return None
+    full_path = os.path.join(project_root_abs, rel_path)
+    if not os.path.isfile(full_path):
+        return None
+    try:
+        with open(full_path, 'r', errors='ignore') as sf:
+            lines = sf.readlines()
+        candidates = []
+        if 1 <= ln_idx <= len(lines):
+            candidates.append(lines[ln_idx - 1])
+        if ln_idx - 2 >= 0 and ln_idx - 2 < len(lines):
+            candidates.append(lines[ln_idx - 2])
+        for cand_line in candidates:
+            m = re.search(r'(?://|/\*)\s*audit-ignore(?::?\s*(.*?))?(?:\*/)?$', cand_line.strip())
+            if m:
+                reason = m.group(1).strip() if m.group(1) else "in-code audit-ignore annotation"
+                return reason
+    except Exception:
+        pass
+    return None
+
+npm_audit_buffer = []
 rows = []
 with open(raw_log, 'r', errors='replace') as f:
     for line in f:
         line = line.rstrip('\n')
         if line.startswith('===SECTION::'):
             section = line.split('::', 1)[1].rstrip('=')
+            if section in severity_overrides:
+                sub_severity = severity_overrides[section]
+            elif section in custom_check_severities:
+                sub_severity = custom_check_severities[section]
+            elif section in {'tsc-noEmit', 'verify_security_antipatterns', 'detect_security_vulnerabilities', 'verify_no_circular', 'madge-circular', 'verify_resource_hygiene', 'verify_schema_drift'}:
+                sub_severity = "CRITICAL"
+            elif section in {'ts-prune'}:
+                sub_severity = "INFO"
+            elif section in {'depcheck'}:
+                sub_severity = "WARN"
+            else:
+                sub_severity = "WARN"
             current_file = None
+            current_sec_file = None
+            npm_audit_buffer = []
             continue
         if line.startswith('===ENDSECTION==='):
+            if section == 'npm-audit' and npm_audit_buffer:
+                try:
+                    audit_str = '\n'.join(npm_audit_buffer)
+                    start_pos = audit_str.find('{')
+                    if start_pos != -1:
+                        data = json.loads(audit_str[start_pos:])
+                        vulns = data.get('vulnerabilities', {})
+                        for pkg, vinfo in vulns.items():
+                            s_level = vinfo.get('severity', 'moderate').upper()
+                            sev = 'CRITICAL' if s_level in {'CRITICAL', 'HIGH'} else ('WARN' if s_level == 'MODERATE' else 'INFO')
+                            via = vinfo.get('via', [])
+                            for itm in via:
+                                if isinstance(itm, dict):
+                                    t_title = itm.get('title', 'Known vulnerability')
+                                    u_url = itm.get('url', '')
+                                    k_key = f"npm-audit|package.json|1|{pkg}:{t_title}"
+                                    f_id = hashlib.md5(k_key.encode('utf-8')).hexdigest()[:10]
+                                    d_desc = f"Dependency vulnerability in {pkg}: {t_title} ({s_level}) {u_url}".strip()
+                                    rows.append((f_id, sev, "npm-audit", "package.json", "1", d_desc, None))
+                except Exception:
+                    pass
+                npm_audit_buffer = []
+            section = "unknown"
+            sub_severity = "WARN"
             current_file = None
+            current_sec_file = None
             continue
-        if re.match(r'^(?:/[^\s:]+|[^\s:]+)\.(?:ts|tsx)$', line.strip()):
+
+        if section == 'npm-audit':
+            npm_audit_buffer.append(line)
+            continue
+
+        if section not in severity_overrides:
+            if 'CRITICAL' in line or '🔴' in line or 'MEMORY:' in line or 'PERF: Double JSON.stringify' in line:
+                sub_severity = "CRITICAL"
+            elif 'WARNING' in line or 'WARN' in line or '🟡' in line:
+                sub_severity = "WARN"
+            elif 'INFO' in line or '📊' in line or 'ℹ️' in line:
+                sub_severity = "INFO"
+
+        # Parser for verify_security_antipatterns format:
+        # - <filepath>
+        #   <message>
+        if section == 'verify_security_antipatterns':
+            m_sec_file = re.match(r'^\s*-\s+(?P<file>[^\s:]+\.(?:sql|ts|tsx|js|mjs))\s*$', line)
+            if m_sec_file:
+                current_sec_file = normalize_file_path(m_sec_file.group('file'))
+                continue
+            m_sec_msg = re.match(r'^\s{2,}(?P<msg>.+)$', line)
+            if m_sec_msg and current_sec_file:
+                rest = m_sec_msg.group('msg').strip()
+                key = f"{section}|{current_sec_file}|1|{rest}"
+                fid = hashlib.md5(key.encode('utf-8')).hexdigest()[:10]
+                ign = check_audit_ignore(current_sec_file, '1')
+                sev = severity_overrides.get(section, "CRITICAL")
+                rows.append((fid, sev, section, current_sec_file, '1', rest, ign))
+                current_sec_file = None
+                continue
+
+        if re.match(r'^(?:/[^\s:]+|[^\s:]+)\.(?:ts|tsx|sql|js|mjs)$', line.strip()):
             current_file = normalize_file_path(line.strip())
             continue
         m_eslint = re.match(r'^\s*(?P<line>\d+):\d+\s+(?P<rest>.*)$', line)
         if m_eslint and current_file:
             ln, rest = m_eslint.group('line'), m_eslint.group('rest').strip()
+            sev = severity_overrides.get(section, "CRITICAL" if "error" in rest.lower() else "WARN")
             key = f"{section}|{current_file}|{ln}|{rest}"
             fid = hashlib.md5(key.encode('utf-8')).hexdigest()[:10]
-            rows.append((fid, section, current_file, ln, rest))
+            ign = check_audit_ignore(current_file, ln)
+            rows.append((fid, sev, section, current_file, ln, rest, ign))
             continue
         for pat in patterns:
             m = pat.match(line.strip())
@@ -214,18 +444,22 @@ with open(raw_log, 'r', errors='replace') as f:
                     break
                 key = f"{section}|{norm_file}|{ln}|{rest}"
                 fid = hashlib.md5(key.encode('utf-8')).hexdigest()[:10]
-                rows.append((fid, section, norm_file, ln, rest))
+                ign = check_audit_ignore(norm_file, ln)
+                rows.append((fid, sub_severity, section, norm_file, ln, rest, ign))
                 break
 
 
 seen = set()
 with open(out_path, 'w') as out:
-    for fid, section, file_, ln, rest in rows:
+    for fid, sev, section, file_, ln, rest, ign in rows:
         if fid in seen:
             continue
         seen.add(fid)
         rest_safe = rest.replace('|', '/')
-        out.write(f"- [ ] `{fid}` | {section} | {file_}:{ln} | {rest_safe}\n")
+        if ign:
+            out.write(f"- [~] `{fid}` | {sev} | {section} | {file_}:{ln} | {rest_safe} | ACCEPTED: in-code audit-ignore ({ign})\n")
+        else:
+            out.write(f"- [ ] `{fid}` | {sev} | {section} | {file_}:{ln} | {rest_safe}\n")
 
 print(f"Extracted {len(seen)} unique findings into checklist.")
 PYEOF

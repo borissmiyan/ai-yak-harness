@@ -7,6 +7,11 @@
 4. [Edge Function Security](#edge-function-security)
 5. [Client-Side Secrets](#client-side-secrets)
 6. [XSS in WebView](#xss-in-webview)
+7. [RPC & SECURITY DEFINER Hardening](#rpc--security-definer-hardening)
+8. [Self-Privilege Escalation on User Profiles](#self-privilege-escalation-on-user-profiles)
+9. [IDOR: Sequential IDs vs Cryptographic UUID Tokens](#idor-sequential-ids-vs-cryptographic-uuid-tokens)
+10. [Master Storage Credentials & Presigned URLs](#master-storage-credentials--presigned-urls)
+11. [Brute-Force Protection & Rate Limiting](#brute-force-protection--rate-limiting)
 
 ---
 
@@ -153,3 +158,179 @@ Telegram Mini Apps run in a WebView. Injected HTML/JS can:
 
 ### Self-Correction Rule
 Search for `dangerouslySetInnerHTML`, `innerHTML`, `document.write`. If found, flag as **CRITICAL — XSS risk** unless explicitly sanitized.
+
+---
+
+## RPC & SECURITY DEFINER Hardening
+
+### Constraint
+1. Every PostgreSQL function declared `SECURITY DEFINER` bypasses Row Level Security and runs with table-owner privileges. It MUST:
+   - Explicitly lock schema path: `SET search_path = public;` to prevent search_path hijacking.
+   - Enforce authentication inside function body: `IF auth.uid() IS NULL THEN RAISE EXCEPTION 'Unauthorized'; END IF;` (or check `is_admin()`).
+   - NEVER be granted to `anon` unless strictly serving a public guest endpoint verified by an unguessable cryptographic token.
+2. `REVOKE EXECUTE ON FUNCTION ... FROM anon, public;` must be applied to all mutating and sensitive RPCs.
+
+### Bad
+```sql
+-- ❌ Critical Vulnerability: SECURITY DEFINER with anon grant and sequential integer ID
+CREATE FUNCTION save_report_stages(p_report_id bigint, p_stages jsonb)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    DELETE FROM report_capacitor_stages WHERE report_id = p_report_id; -- anyone can wipe!
+END;
+$$;
+GRANT EXECUTE ON FUNCTION save_report_stages(bigint, jsonb) TO anon;
+```
+
+### Good
+```sql
+-- ✅ Authenticated execution only with session check and search_path lock
+CREATE FUNCTION save_report_stages(p_report_id bigint, p_stages jsonb)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    IF auth.uid() IS NULL THEN
+        RAISE EXCEPTION 'Neautorizovaný prístup';
+    END IF;
+    -- verify immutability or ownership before mutation...
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION save_report_stages(bigint, jsonb) FROM anon, public;
+GRANT EXECUTE ON FUNCTION save_report_stages(bigint, jsonb) TO authenticated, service_role;
+```
+
+### Self-Correction Rule
+Scan all SQL migrations and RPCs: flag any `SECURITY DEFINER` function with `GRANT ... TO anon` that modifies data or queries primary keys by numeric ID without a cryptographic UUID token.
+
+---
+
+## Self-Privilege Escalation on User Profiles
+
+### Constraint
+In PostgreSQL, RLS policies for `UPDATE` evaluate row-level criteria, NOT column-level criteria.
+A policy like `CREATE POLICY ON profiles FOR UPDATE USING (auth.uid() = id)` allows a user to update **every single column in their row**, including `role`, `is_approved`, `is_admin`, or `balance`.
+
+### Bad
+```sql
+-- ❌ Privilege Escalation: User can execute supabase.from('profiles').update({ role: 'admin' })
+CREATE POLICY "Users can update own profile" ON profiles
+FOR UPDATE USING (auth.uid() = id);
+```
+
+### Good
+```sql
+-- ✅ Paired with BEFORE UPDATE trigger protecting privileged columns
+CREATE OR REPLACE FUNCTION public.protect_profile_privileged_fields()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    IF NOT public.is_admin() THEN
+        IF NEW.role IS DISTINCT FROM OLD.role OR NEW.is_approved IS DISTINCT FROM OLD.is_approved THEN
+            RAISE EXCEPTION 'Permission denied: Cannot modify privileged fields';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_protect_profile_fields
+BEFORE UPDATE ON public.profiles
+FOR EACH ROW EXECUTE FUNCTION public.protect_profile_privileged_fields();
+```
+
+### Self-Correction Rule
+Check `profiles` or user tables: if an `UPDATE` policy allows `auth.uid() = id`, verify that a `BEFORE UPDATE` trigger strictly blocks mutations to `role`, `is_approved`, and admin flags.
+
+---
+
+## IDOR: Sequential IDs vs Cryptographic UUID Tokens
+
+### Constraint
+Public URLs, customer-facing signing portals, and guest links MUST NEVER expose or accept sequential integer IDs (`/sign/19`, `/share/report-19`). An attacker can enumerate `1..N` to exfiltrate customer PII or tamper with unsigned resources.
+Public access MUST require a 128-bit unguessable UUID token (`signing_token`).
+
+### Bad
+```tsx
+// ❌ Predictable sequential integer URL leak
+const signUrl = `https://app.elconder.sk/sign/protokol-${report.id}`;
+```
+
+### Good
+```tsx
+// ✅ Unguessable UUID token URL
+const signUrl = `https://app.elconder.sk/sign/${report.signing_token}`;
+```
+
+### Self-Correction Rule
+Search frontend and backend code for `/sign/` or public guest links: if the URL embeds `.id` or `protokol-`, flag as **CRITICAL IDOR exposure**; enforce UUID token generation (`gen_random_uuid()`).
+
+---
+
+## Master Storage Credentials & Presigned URLs
+
+### Constraint
+1. **NEVER** expose master S3 / Cloudflare R2 access keys (`VITE_CLOUDFLARE_R2_SECRET_ACCESS_KEY`) in client frontend bundles. Any key prefixed with `VITE_` compiles directly into public JavaScript.
+2. File uploads MUST use server-side Presigned URLs minted by an authenticated Edge Function or Worker (`r2-presign`).
+3. The client requests a presigned `PUT` URL, then uploads the binary Blob directly to the storage bucket without possessing master AWS/Cloudflare credentials.
+
+### Bad
+```tsx
+// ❌ Exposing master S3 credentials in browser
+const s3 = new S3Client({
+  credentials: {
+    accessKeyId: import.meta.env.VITE_R2_ACCESS_KEY,
+    secretAccessKey: import.meta.env.VITE_R2_SECRET_KEY, // ← Compiled into public bundle!
+  }
+});
+```
+
+### Good
+```tsx
+// ✅ Request ephemeral presigned URL from Edge Function
+const { data } = await supabase.functions.invoke('r2-presign', {
+  body: { storagePath: `reports/${id}.pdf`, contentType: 'application/pdf' }
+});
+await fetch(data.uploadUrl, { method: 'PUT', body: pdfBlob });
+```
+
+### Self-Correction Rule
+Search `src/` for `import.meta.env.VITE_*SECRET*`: if present, flag as **CRITICAL — Master credential exposure in client bundle**.
+
+---
+
+## Brute-Force Protection & Rate Limiting
+
+### Constraint
+Sensitive verification endpoints without multi-factor auth (e.g. Waiting Room Daily Security Codes, PIN codes, guest OTPs) MUST enforce rate limiting and temporary account/IP lockout.
+A 6-digit numeric space ($10^6$ combinations) can be brute-forced in under 15 minutes without rate limiting.
+
+### Bad
+```sql
+-- ❌ No attempt tracking or lockout
+CREATE FUNCTION validate_code(p_code text) RETURNS boolean AS $$
+BEGIN
+    RETURN (SELECT code FROM daily_code) = p_code;
+END;
+$$;
+```
+
+### Good
+```sql
+-- ✅ Rate-limited with 15-minute lockout table
+CREATE FUNCTION validate_code(p_code text) RETURNS boolean AS $$
+DECLARE
+    v_attempts int;
+BEGIN
+    SELECT count(*) INTO v_attempts FROM daily_code_attempts
+    WHERE user_id = auth.uid() AND created_at > now() - interval '15 minutes';
+    
+    IF v_attempts >= 5 THEN
+        RAISE EXCEPTION 'Too many attempts. Locked for 15 minutes.';
+    END IF;
+    -- validate and record attempt...
+END;
+$$;
+```
+
+### Self-Correction Rule
+Audit all numeric or short-code verification functions: if no attempt tracking table or rate-limiter exists, flag as **HIGH — Brute-force vulnerability**.

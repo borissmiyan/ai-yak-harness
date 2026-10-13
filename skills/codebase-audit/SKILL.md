@@ -35,11 +35,13 @@ trusting what a previous conversation said.
 
 ## Audit Pipeline
 
-### Step -0.5: Workspace Isolation Enforcement (MANDATORY)
+### Step -0.5: Strict Workspace Isolation & Decontamination (MANDATORY)
 
-Every audit MUST strictly operate within the boundaries of the target project repository (`$PROJECT_ROOT`).
-- **Mechanical Path Validation:** `run_full_audit.sh` extracts findings ONLY for files that physically exist within the current repository, normalizing all filepaths relative to `$PROJECT_ROOT` and discarding foreign paths.
-- **Cross-Workspace Decontamination:** `sync_fix_plan.sh` automatically filters out any existing entries referencing foreign repositories (e.g., `voicefin`) or non-existent files. Copying `.agent` across workspaces will never contaminate the local `fix_plan.md`.
+Every audit MUST strictly operate within the boundaries of the target project repository (`$PROJECT_ROOT`). Cross-project contamination is permanently blocked via a 4-tier isolation architecture:
+- **1. Cryptographic Workspace Fingerprinting:** `.project_fingerprint` records the repository's root commit (`git rev-list --max-parents=0 HEAD`), canonical absolute root path, and `package.json` project name. Any mismatch triggers automatic quarantining and archiving of foreign audit artifacts (`foreign_fix_plan_*.bak.md`).
+- **2. Legacy Plan Decontamination:** If `.project_fingerprint` was missing, `sync_fix_plan.sh` inspects existing plans for foreign markers (non-existent files or excluded directories like `.agents`, `node_modules`). If detected, the foreign plan is immediately quarantined.
+- **3. Scanner Directory Isolation:** Every detector (`detect_*.sh`) and AST tool strictly excludes `.agent`, `.agents`, `node_modules`, `dist`, `build`, `.git`, `scratch`, `backups`, and `graphify-out` via uniform `$EXCLUDE_OPTS` and path pruning.
+- **4. Mechanical Path & Existence Validation:** `run_full_audit.sh` extracts findings ONLY for files that physically exist on disk within the current repository (`os.path.isfile(full_path)`), normalizing all filepaths relative to `$PROJECT_ROOT` and silently discarding foreign or excluded paths. Copying `.agent` across workspaces will NEVER contaminate local tracking.
 
 ### Step -1: Project Context Bootstrap (MANDATORY — run before everything else)
 
@@ -130,6 +132,7 @@ Determine the code's domain category:
 | **React Query / TanStack Query** | `useQuery`, `useMutation`, `queryKey`, `QueryClient` | `references/react_query.md` | Medium |
 | **UI Architecture** | Naked Modals, Flexbox Blowouts (`min-w-0`), Global Scroll Bans, CLS Skeletons | `references/ui_architecture.md` | High |
 | **Architecture / Principles** | File structure, duplication, feature scope, dead code, naming | `references/code_principles.md` | Medium |
+| **Security & OWASP** | Service Role Leaks, Edge Function bypass, XSS, eval/dynamic code, Open Redirects, CVEs | `references/tma_security.md` | Critical |
 | **Styling & CSS** | Ad-hoc hex colors, CSS string concatenation, strict border radii, touch targets, `@theme` vs config | `references/styling_tailwind.md` | High |
 
 If code spans multiple categories, read ALL relevant reference files before auditing.
@@ -139,27 +142,47 @@ If code spans multiple categories, read ALL relevant reference files before audi
 ### Stages A, B, E: One Command (`audit_cycle.sh`)
 
 ```bash
-bash .agent/skills/codebase-audit/scripts/audit_cycle.sh <target_dir>
+bash .agent/skills/codebase-audit/scripts/audit_cycle.sh [target_dir] [--ci] [--fail-on=CRITICAL|WARN|INFO] [--fix]
 ```
 
-This is the **only** command for scanning, syncing the fix plan, and
-computing the verdict. It chains `run_full_audit.sh` (Stage A) →
-`validate_fix_plan.sh` + `sync_fix_plan.sh` (Stage B) → `update_status.sh`
-(Stage E), and ends by printing `status.md` verbatim. There used to be
-three separate scripts here that the agent was expected to run in
-sequence — in practice, a real audit ran the first one, then hand-wrote
-its own `findings_raw.md`/`fix_plan.md`/`status.md` instead of calling the
-other two, so the tool-failure gate and ID validation never got a chance
-to fire. **There is no longer a partial path.** Either the whole cycle
-completes, or it aborts loudly with instructions at whichever stage
-failed, and it will refuse to sync on top of a `fix_plan.md` that isn't in
-the exact format it expects — including one that got there by hand.
+This is the **only** command for scanning, syncing the fix plan, computing the verdict, and running CI Quality Gates:
+- `[target_dir]`: Target directory (defaults to `.`).
+- `--ci`: CI Quality Gate mode. Exits with exit code 1 if unaccepted findings at or above the failure threshold remain, or if any tool fails.
+- `--fail-on=<level>`: Quality gate threshold (`CRITICAL` [default], `WARN`, or `INFO`). Can also be declared in `.auditrc.json`.
+- `--fix`: Safe auto-fix mode. Invokes the project's linter/formatter (`autoFixCommand`, `npm run lint:fix`, or `eslint --fix`) prior to scanning to eliminate trivial findings automatically.
 
-`<target_dir>` may be a feature subdirectory. `tsc`/`ts-prune`/`madge`/
-`depcheck` auto-detect and run against the real project root (nearest
-`tsconfig.json`/`package.json` above it); `eslint` and the `detect_*.sh`
-scripts stay scoped to `<target_dir>`. Audit state (`.agent/audit/`) always
-lives at the detected project root.
+It chains `run_full_audit.sh` (Stage A) → `validate_fix_plan.sh` + `sync_fix_plan.sh` (Stage B) → `update_status.sh` (Stage E), and outputs both human-readable `status.md` and machine-readable `summary.json`. There used to be three separate scripts here that the agent was expected to run in sequence — in practice, a real audit ran the first one, then hand-wrote its own `findings_raw.md`/`fix_plan.md`/`status.md` instead of calling the other two, so the tool-failure gate and ID validation never got a chance to fire. **There is no longer a partial path.** Either the whole cycle completes, or it aborts loudly with instructions at whichever stage failed.
+
+### Project Configuration (`.auditrc.json` / `.auditrc`)
+
+To keep the audit skill fully generic across diverse repositories without hardcoded assumptions, projects can place an optional `.auditrc.json` file in their repository root:
+
+```json
+{
+  "failOn": "CRITICAL",
+  "excludeDirs": ["e2e", "test-fixtures", "legacy"],
+  "disabledTools": ["depcheck"],
+  "autoFixCommand": "npm run lint -- --fix",
+  "severityOverrides": {
+    "ts-prune": "INFO"
+  },
+  "customChecks": [
+    {
+      "name": "verify_security_antipatterns",
+      "cmd": "node scripts/verify-security-antipatterns.mjs",
+      "severity": "CRITICAL"
+    }
+  ]
+}
+```
+
+- **`excludeDirs`**: Custom directories excluded across all regex detectors and the fix plan.
+- **`disabledTools`**: Skip tools that do not apply to the current architecture.
+- **`severityOverrides`**: Re-tier specific tool sections to match project priorities.
+- **`customChecks`**: Run repository-specific AST guards or security linters as first-class citizens.
+- **`autoFixCommand`**: Project-specific command for the `--fix` pipeline.
+
+> **Localization Note:** Language-specific rules (such as Slovak default language or Zero-Cyrillic UI checks) are project-specific and belong in the project's repository rules/ESLint configuration, rather than being hardcoded into the universal audit skill.
 
 **Hard rule — no exceptions:** `findings_raw.md`, `fix_plan.md`, and
 `status.md` are written ONLY by these scripts. **Do not use your file-edit
@@ -226,6 +249,8 @@ separately. What it did:
   (accepted) lines are **never** reset — only newly-appearing IDs are added
   as `[ ]`, and IDs that disappeared from the latest scan are auto-marked
   `[x] RESOLVED`.
+- **Severity-First Ordering:** Items are prioritized and grouped by severity: 🔴 `CRITICAL` (compiler errors, AST security vulnerabilities, memory leaks, circular imports) → 🟡 `WARN` (missing React.memo, non-null assertions, unused deps) → 📊 `INFO` (dead code, line limits). Always tackle `CRITICAL` items first!
+- **In-Code Whitelist (`// audit-ignore`):** If a finding is an intentional design choice or exception, you do not need to hand-edit `fix_plan.md`. Simply add `// audit-ignore: <reason>` or `/* audit-ignore: <reason> */` directly above or on the flagged line. On the next audit cycle, it will automatically sync as `- [~] \`ID\` | ... | ACCEPTED: in-code audit-ignore (<reason>)` and reduce the pending count without human intervention.
 - The plan covers **every** pending item, not just Critical-severity ones.
   The goal is zero unresolved technical debt from this scan, not a "top N"
   report.

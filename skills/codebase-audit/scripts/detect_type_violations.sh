@@ -59,40 +59,47 @@ else
   echo "  ⚠️  tsconfig.json not found"
 fi
 
+EXCLUDE_OPTS="--exclude-dir=.agent --exclude-dir=.agents --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=build --exclude-dir=.git --exclude-dir=backups --exclude-dir=scratch --exclude-dir=graphify-out --exclude-dir=e2e"
+if [ -n "${AUDIT_EXTRA_EXCLUDES:-}" ]; then
+  for extra_dir in $AUDIT_EXTRA_EXCLUDES; do
+    EXCLUDE_OPTS="$EXCLUDE_OPTS --exclude-dir=$extra_dir"
+  done
+fi
+
 echo ""
 echo -e "${RED}🔴 CRITICAL: Explicit \`any\` usage${NC}"
 echo "-------------------------------"
-grep -rn --include='*.ts' --include='*.tsx' \
+grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS \
   -E ':\s*any\b|<any>|as any|\bany\[|Record<string,\s*any>' \
-  "$TARGET" 2>/dev/null | grep -v 'node_modules' | grep -v '.test.' || echo "  ✅ No \`any\` found"
+  "$TARGET" 2>/dev/null | grep -v '.test.' | grep -v '__tests__' | grep -v '.spec.' || echo "  ✅ No \`any\` found"
 
 echo ""
 echo -e "${RED}🔴 CRITICAL: @ts-ignore / @ts-expect-error${NC}"
 echo "-------------------------------"
-grep -rn --include='*.ts' --include='*.tsx' \
+grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS \
   -E '@ts-ignore|@ts-expect-error|@ts-nocheck' \
-  "$TARGET" 2>/dev/null | grep -v 'node_modules' || echo "  ✅ No TS suppression found"
+  "$TARGET" 2>/dev/null | grep -v '.test.' | grep -v '__tests__' | grep -v '.spec.' || echo "  ✅ No TS suppression found"
 
 echo ""
 echo -e "${YELLOW}🟡 WARNING: Non-null assertions (!)${NC}"
 echo "-------------------------------"
-grep -rn --include='*.ts' --include='*.tsx' \
+grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS \
   -E '\w+!\.' \
-  "$TARGET" 2>/dev/null | grep -v 'node_modules' | grep -v '.test.' | head -20 || echo "  ✅ None found"
+  "$TARGET" 2>/dev/null | grep -v '.test.' | grep -v '__tests__' | grep -v '.spec.' | head -20 || echo "  ✅ None found"
 
 echo ""
 echo -e "${YELLOW}🟡 WARNING: Type casts (as SomeType)${NC}"
 echo "-------------------------------"
-grep -rn --include='*.ts' --include='*.tsx' \
+grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS \
   -E '\bas\s+[A-Z][a-zA-Z]+' \
-  "$TARGET" 2>/dev/null | grep -v 'node_modules' | grep -v 'as React' | grep -v '.test.' | head -20 || echo "  ✅ None found"
+  "$TARGET" 2>/dev/null | grep -v 'as React' | grep -v '.test.' | grep -v '__tests__' | grep -v '.spec.' | head -20 || echo "  ✅ None found"
 
 echo ""
 echo -e "${YELLOW}🟡 WARNING: Missing return types on exported functions${NC}"
 echo "-------------------------------"
-grep -rn --include='*.ts' --include='*.tsx' \
+grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS \
   -E 'export (async )?function \w+\([^)]*\)\s*\{' \
-  "$TARGET" 2>/dev/null | grep -v 'node_modules' | grep -v '.test.' | head -20 || echo "  ✅ All exported functions have return types"
+  "$TARGET" 2>/dev/null | grep -v '.test.' | grep -v '__tests__' | grep -v '.spec.' | head -20 || echo "  ✅ All exported functions have return types"
 
 echo ""
 echo "=============================="

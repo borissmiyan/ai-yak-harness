@@ -23,24 +23,47 @@
 
 set -uo pipefail
 
-TARGET="${1:-.}"
+TARGET="."
+CI_MODE=false
+FAIL_ON=""
+FIX_MODE=false
+
+for arg in "$@"; do
+  case "$arg" in
+    --ci)
+      CI_MODE=true
+      ;;
+    --fail-on=*)
+      FAIL_ON="${arg#*=}"
+      CI_MODE=true
+      ;;
+    --fix)
+      FIX_MODE=true
+      ;;
+    --help|-h)
+      echo "Usage: bash audit_cycle.sh [target_dir] [--ci] [--fail-on=CRITICAL|WARN|INFO] [--fix]"
+      echo ""
+      echo "Flags:"
+      echo "  [target_dir]        Directory to audit (default: .)"
+      echo "  --ci                Enable CI Quality Gate mode (exits with code 1 on failure)"
+      echo "  --fail-on=<level>   Set failure severity threshold: CRITICAL (default), WARN, or INFO"
+      echo "  --fix               Attempt safe auto-fix (linter / code style) before scanning"
+      exit 0
+      ;;
+    -*)
+      echo "Unknown flag: $arg" >&2
+      echo "Use --help for usage information." >&2
+      exit 1
+      ;;
+    *)
+      TARGET="$arg"
+      ;;
+  esac
+done
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "════════════════════════════════════════════════════════════"
-echo " AUDIT CYCLE — Stage A (scan)"
-echo "════════════════════════════════════════════════════════════"
-bash "$SCRIPT_DIR/run_full_audit.sh" "$TARGET"
-STAGE_A_RC=$?
-if [ $STAGE_A_RC -ne 0 ]; then
-  echo "" >&2
-  echo "❌ Stage A failed validation (see above). Fix findings_raw.md (or" >&2
-  echo "   regenerate it — never hand-patch the checklist) before continuing." >&2
-  echo "   Cycle aborted — fix_plan.md and status.md were NOT touched." >&2
-  exit 1
-fi
-
-# Resolve the same project root run_full_audit.sh used, so Stage B/E look
-# in the same .agent/audit/ directory Stage A just wrote to.
+# Resolve the project root
 resolve_root() {
   local dir
   dir="$(cd "$1" && pwd)"
@@ -55,14 +78,61 @@ resolve_root() {
 }
 PROJECT_ROOT="$(resolve_root "$TARGET")"
 
+# If fail-on wasn't explicitly set in CLI, check .auditrc.json
+if [ -z "$FAIL_ON" ]; then
+  CONFIG_FAIL_ON=$(python3 -c "import json, os; p='$PROJECT_ROOT/.auditrc.json'; d = json.load(open(p)) if os.path.exists(p) else {}; print(d.get('failOn', 'CRITICAL'))" 2>/dev/null || echo "CRITICAL")
+  FAIL_ON="$CONFIG_FAIL_ON"
+fi
+
+# Pre-scan Auto-Fix (--fix)
+if [ "$FIX_MODE" = true ]; then
+  echo "════════════════════════════════════════════════════════════"
+  echo " AUDIT CYCLE — Pre-scan Auto-Fix (--fix)"
+  echo "════════════════════════════════════════════════════════════"
+  
+  AUTO_FIX_CMD=""
+  CONFIG_FILE="$PROJECT_ROOT/.auditrc.json"
+  if [ -f "$CONFIG_FILE" ]; then
+    AUTO_FIX_CMD=$(python3 -c "import json; d=json.load(open('$CONFIG_FILE')); print(d.get('autoFixCommand', ''))" 2>/dev/null || true)
+  fi
+
+  if [ -n "$AUTO_FIX_CMD" ]; then
+    echo "Running custom auto-fix command: $AUTO_FIX_CMD"
+    (cd "$PROJECT_ROOT" && eval "$AUTO_FIX_CMD") || echo "⚠️  Custom auto-fix exited with non-zero code, continuing scan..."
+  elif [ -f "$PROJECT_ROOT/package.json" ] && grep -q '"lint:fix"' "$PROJECT_ROOT/package.json"; then
+    echo "Running npm run lint:fix..."
+    (cd "$PROJECT_ROOT" && npm run lint:fix) || echo "⚠️  lint:fix exited with non-zero code, continuing scan..."
+  elif [ -f "$PROJECT_ROOT/package.json" ] && grep -q '"lint"' "$PROJECT_ROOT/package.json"; then
+    echo "Running npm run lint -- --fix..."
+    (cd "$PROJECT_ROOT" && npm run lint -- --fix) || echo "⚠️  npm run lint -- --fix exited with non-zero code, continuing scan..."
+  elif command -v npx >/dev/null 2>&1; then
+    echo "Running npx eslint --fix..."
+    (cd "$PROJECT_ROOT" && npx --no-install eslint --fix "$TARGET") || echo "⚠️  eslint --fix exited with non-zero code, continuing scan..."
+  else
+    echo "ℹ️  No auto-fix command detected for this project."
+  fi
+  echo ""
+fi
+
+echo "════════════════════════════════════════════════════════════"
+echo " AUDIT CYCLE — Stage A (scan)"
+echo "════════════════════════════════════════════════════════════"
+bash "$SCRIPT_DIR/run_full_audit.sh" "$TARGET"
+STAGE_A_RC=$?
+if [ $STAGE_A_RC -ne 0 ]; then
+  echo "" >&2
+  echo "❌ Stage A failed validation (see above). Fix findings_raw.md (or" >&2
+  echo "   regenerate it — never hand-patch the checklist) before continuing." >&2
+  echo "   Cycle aborted — fix_plan.md and status.md were NOT touched." >&2
+  exit 1
+fi
+
 echo ""
 echo "════════════════════════════════════════════════════════════"
 echo " AUDIT CYCLE — Stage B (sync fix plan)"
 echo "════════════════════════════════════════════════════════════"
 
-# Validate any PRE-EXISTING fix_plan.md before syncing into it — this is
-# where the real-world failure landed: a hand-authored fix_plan.md with
-# invented IDs sat there and nothing ever checked it.
+# Validate any PRE-EXISTING fix_plan.md before syncing into it
 if ! bash "$SCRIPT_DIR/validate_fix_plan.sh" "$PROJECT_ROOT"; then
   echo "" >&2
   echo "❌ Existing fix_plan.md is malformed (see above) — refusing to sync" >&2
@@ -86,3 +156,56 @@ echo " VERBATIM status.md — this, unedited, is the verdict to report"
 echo "════════════════════════════════════════════════════════════"
 cat "$PROJECT_ROOT/.agent/audit/status.md"
 echo "════════════════════════════════════════════════════════════"
+
+# CI Quality Gate Check
+if [ "$CI_MODE" = true ]; then
+  echo ""
+  echo "════════════════════════════════════════════════════════════"
+  echo " AUDIT CYCLE — CI Quality Gate Evaluation (Threshold: $FAIL_ON)"
+  echo "════════════════════════════════════════════════════════════"
+
+  SUMMARY_FILE="$PROJECT_ROOT/.agent/audit/summary.json"
+  if [ ! -f "$SUMMARY_FILE" ]; then
+    echo "❌ CI GATE FAILED: $SUMMARY_FILE not found." >&2
+    exit 1
+  fi
+
+  python3 - "$SUMMARY_FILE" "$FAIL_ON" <<'PYEOF'
+import sys, json
+
+summary_file, fail_on = sys.argv[1], sys.argv[2].upper()
+with open(summary_file) as f:
+    data = json.load(f)
+
+failures = data.get('toolFailures', [])
+if failures:
+    print(f"❌ CI GATE FAILED: Tool execution incomplete ({', '.join(failures)}).", file=sys.stderr)
+    sys.exit(1)
+
+metrics = data.get('metrics', {})
+crit = metrics.get('criticalPending', 0)
+warn = metrics.get('warnPending', 0)
+info = metrics.get('infoPending', 0)
+total = metrics.get('totalPending', 0)
+
+if fail_on == 'CRITICAL':
+    if crit > 0:
+        print(f"❌ CI GATE FAILED: {crit} unresolved CRITICAL finding(s) pending.", file=sys.stderr)
+        sys.exit(1)
+elif fail_on == 'WARN':
+    if crit > 0 or warn > 0:
+        print(f"❌ CI GATE FAILED: {crit} Critical and {warn} Warn finding(s) pending.", file=sys.stderr)
+        sys.exit(1)
+elif fail_on == 'INFO':
+    if total > 0:
+        print(f"❌ CI GATE FAILED: {total} finding(s) pending.", file=sys.stderr)
+        sys.exit(1)
+
+print(f"✅ CI QUALITY GATE PASSED: 0 blocking findings at threshold '{fail_on}' (Critical: {crit}, Warn: {warn}, Info: {info}).")
+sys.exit(0)
+PYEOF
+  CI_RC=$?
+  if [ $CI_RC -ne 0 ]; then
+    exit $CI_RC
+  fi
+fi

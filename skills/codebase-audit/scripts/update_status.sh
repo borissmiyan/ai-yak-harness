@@ -22,6 +22,9 @@ if [ ! -f "$PLAN" ]; then
 fi
 
 PENDING=$(grep -c '^- \[ \]' "$PLAN" || true)
+CRIT_PENDING=$(grep -cE '^- \[ \] `[0-9a-f]{10}` \| CRITICAL' "$PLAN" 2>/dev/null || true)
+WARN_PENDING=$(grep -cE '^- \[ \] `[0-9a-f]{10}` \| WARN' "$PLAN" 2>/dev/null || true)
+INFO_PENDING=$(grep -cE '^- \[ \] `[0-9a-f]{10}` \| INFO' "$PLAN" 2>/dev/null || true)
 DONE=$(grep -c '^- \[x\]' "$PLAN" || true)
 ACCEPTED=$(grep -c '^- \[~\]' "$PLAN" || true)
 
@@ -47,7 +50,7 @@ if [ -n "$TOOL_FAILURE_NOTE" ]; then
 elif [ "$PENDING" -eq 0 ]; then
   VERDICT="CLEAN — no pending findings, and all tools executed successfully. All items are either fixed/resolved or explicitly accepted."
 else
-  VERDICT="NOT CLEAN — $PENDING finding(s) still pending in fix_plan.md."
+  VERDICT="NOT CLEAN — $PENDING finding(s) still pending in fix_plan.md (🔴 $CRIT_PENDING Critical, 🟡 $WARN_PENDING Warn, 📊 $INFO_PENDING Info)."
 fi
 
 {
@@ -62,11 +65,60 @@ fi
   echo ""
   echo "**Verdict: $VERDICT**"
   echo ""
-  echo "- Pending: $PENDING"
+  echo "- Pending: $PENDING (🔴 Critical: $CRIT_PENDING, 🟡 Warn: $WARN_PENDING, 📊 Info: $INFO_PENDING)"
   echo "- Fixed/resolved: $DONE"
   echo "- Accepted as-is: $ACCEPTED"
   echo ""
   echo "Next step: $( [ "$PENDING" -eq 0 ] && echo "none — report clean to the user." || echo "work through the \`[ ]\` items in fix_plan.md, then re-run the full pipeline (Stage A → D)." )"
 } > "$STATUS"
 
+SUMMARY_JSON="$AUDIT_DIR/summary.json"
+python3 - "$SUMMARY_JSON" "$CYCLE" "$VERDICT" "$PENDING" "$CRIT_PENDING" "$WARN_PENDING" "$INFO_PENDING" "$DONE" "$ACCEPTED" "$HEALTH_LOG" <<'PYEOF'
+import sys, json, os, datetime
+
+out_path = sys.argv[1]
+cycle = int(sys.argv[2])
+verdict = sys.argv[3]
+pending = int(sys.argv[4])
+crit = int(sys.argv[5])
+warn = int(sys.argv[6])
+info = int(sys.argv[7])
+done = int(sys.argv[8])
+accepted = int(sys.argv[9])
+health_log = sys.argv[10]
+
+failed_tools = []
+if os.path.isfile(health_log):
+    try:
+        with open(health_log, 'r') as f:
+            for line in f:
+                parts = line.strip().split('\t')
+                if len(parts) >= 3 and parts[2].startswith('FAILED'):
+                    failed_tools.append(parts[0])
+    except Exception:
+        pass
+
+is_clean = (pending == 0 and len(failed_tools) == 0 and not verdict.startswith("UNKNOWN"))
+
+summary = {
+    "cycle": cycle,
+    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    "verdict": verdict,
+    "isClean": is_clean,
+    "toolFailures": failed_tools,
+    "metrics": {
+        "totalPending": pending,
+        "criticalPending": crit,
+        "warnPending": warn,
+        "infoPending": info,
+        "fixed": done,
+        "accepted": accepted
+    }
+}
+
+with open(out_path, 'w') as f:
+    json.dump(summary, f, indent=2)
+PYEOF
+
 echo "Wrote $STATUS — Cycle $CYCLE, verdict: $VERDICT"
+echo "Wrote $SUMMARY_JSON (machine-readable metrics)"

@@ -215,7 +215,8 @@ const configsToCopy = [
     { src: path.join(__dirname, 'configs', 'playwright.config.snippet.ts'), dest: path.join(targetDir, 'configs', 'playwright.config.snippet.ts'), label: 'Playwright Config Snippet' },
     { src: path.join(__dirname, 'test', 'vitest.config.snippet.ts'), dest: path.join(targetDir, 'configs', 'vitest.config.snippet.ts'), label: 'Vitest Config Snippet' },
     { src: path.join(__dirname, 'test', 'setup.ts'), dest: path.join(targetDir, 'src', 'test', 'setup.ts'), label: 'Hermetic Test Setup' },
-    { src: path.join(__dirname, 'utils', 'security.ts'), dest: path.join(targetDir, 'src', 'utils', 'security.ts'), label: 'Security Sanitizers (DOMPurify)' }
+    { src: path.join(__dirname, 'utils', 'security.ts'), dest: path.join(targetDir, 'src', 'utils', 'security.ts'), label: 'Security Sanitizers (DOMPurify)' },
+    { src: path.join(__dirname, 'configs', '.auditrc.json'), dest: path.join(targetDir, '.auditrc.json'), label: 'Codebase Audit Config (.auditrc.json)' }
 ];
 
 for (const cfg of configsToCopy) {
@@ -258,6 +259,11 @@ const harnessScripts = {
     'design:showcase': 'node scripts/generate-design-showcase.mjs',
     'check:dead-code': 'knip',
     'check:schema-drift': 'node scripts/verify-schema-drift.mjs',
+    'check:debug-leftovers': 'node scripts/verify-no-debug-leftovers.mjs',
+    'check:large-files': 'node scripts/verify-no-large-files.mjs',
+    'audit': 'bash .agents/skills/codebase-audit/scripts/audit_cycle.sh .',
+    'audit:ci': 'bash .agents/skills/codebase-audit/scripts/audit_cycle.sh . --ci --fail-on=CRITICAL',
+    'audit:fix': 'bash .agents/skills/codebase-audit/scripts/audit_cycle.sh . --fix',
     'build:analyze': 'ANALYZE=true vite build',
     'harness:worktree': 'node scripts/harness-worktree.mjs',
     'test:flaky': 'node scripts/test-flaky.mjs',

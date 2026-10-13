@@ -13,7 +13,12 @@
     "design:export-tokens": "node scripts/export-design-tokens.mjs",
     "design:scaffold-ui": "node scripts/scaffold-ui-kit.mjs",
     "design:showcase": "node scripts/generate-design-showcase.mjs",
-    "check:security:antipatterns": "node scripts/verify-security-antipatterns.mjs"
+    "check:security:antipatterns": "node scripts/verify-security-antipatterns.mjs",
+    "check:debug-leftovers": "node scripts/verify-no-debug-leftovers.mjs",
+    "check:large-files": "node scripts/verify-no-large-files.mjs",
+    "audit": "bash skills/codebase-audit/scripts/audit_cycle.sh .",
+    "audit:ci": "bash skills/codebase-audit/scripts/audit_cycle.sh . --ci --fail-on=CRITICAL",
+    "audit:fix": "bash skills/codebase-audit/scripts/audit_cycle.sh . --fix"
   },
   "keywords": [
     "ai-agent",
