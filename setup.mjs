@@ -59,16 +59,25 @@ const scriptsSourceDir = path.join(__dirname, 'scripts');
 const scriptsTargetDir = path.join(targetDir, 'scripts');
 
 if (fs.existsSync(scriptsSourceDir)) {
-    const scriptFiles = fs.readdirSync(scriptsSourceDir);
-    for (const file of scriptFiles) {
-        const srcFile = path.join(scriptsSourceDir, file);
-        const destFile = path.join(scriptsTargetDir, file);
-        fs.copyFileSync(srcFile, destFile);
-        try {
-            fs.chmodSync(destFile, 0o755);
-        } catch {}
-        console.log(`  📜 Установлен скрипт верификации: scripts/${file}`);
-    }
+    const copyRecursiveScripts = (src, dest, relPrefix = '') => {
+        const entries = fs.readdirSync(src, { withFileTypes: true });
+        for (const entry of entries) {
+            const srcPath = path.join(src, entry.name);
+            const destPath = path.join(dest, entry.name);
+            const relPath = path.join(relPrefix, entry.name);
+            if (entry.isDirectory()) {
+                fs.mkdirSync(destPath, { recursive: true });
+                copyRecursiveScripts(srcPath, destPath, relPath);
+            } else {
+                fs.copyFileSync(srcPath, destPath);
+                try {
+                    fs.chmodSync(destPath, 0o755);
+                } catch {}
+                console.log(`  📜 Установлен скрипт верификации: scripts/${relPath}`);
+            }
+        }
+    };
+    copyRecursiveScripts(scriptsSourceDir, scriptsTargetDir);
 }
 
 // 3. Копируем Git-хуки (.husky/)
@@ -115,7 +124,7 @@ if (fs.existsSync(skillsSourceDir)) {
                     if (entry.isDirectory()) {
                         fs.mkdirSync(destPath, { recursive: true });
                         copyRecursive(srcPath, destPath);
-                    } else if (!fs.existsSync(destPath)) {
+                    } else {
                         fs.copyFileSync(srcPath, destPath);
                     }
                 }
@@ -143,11 +152,18 @@ if (fs.existsSync(planningSrcDir)) {
         console.log(`  🏛 Установлен шаблон решений: .planning/decisions/TEMPLATE.md`);
     }
 
-    const d01Src = path.join(planningSrcDir, 'decisions', 'D-01-initial-architecture.md');
-    const d01Dest = path.join(targetDir, '.planning', 'decisions', 'D-01-initial-architecture.md');
-    if (!fs.existsSync(d01Dest)) {
-        fs.copyFileSync(d01Src, d01Dest);
-        console.log(`  🏛 Установлено базовое решение: .planning/decisions/D-01-initial-architecture.md`);
+    const decSrcDir = path.join(planningSrcDir, 'decisions');
+    if (fs.existsSync(decSrcDir)) {
+        const decFiles = fs.readdirSync(decSrcDir);
+        for (const decFile of decFiles) {
+            if (decFile === 'TEMPLATE.md') continue;
+            const srcPath = path.join(decSrcDir, decFile);
+            const destPath = path.join(targetDir, '.planning', 'decisions', decFile);
+            if (!fs.existsSync(destPath)) {
+                fs.copyFileSync(srcPath, destPath);
+                console.log(`  🏛 Установлено базовое решение: .planning/decisions/${decFile}`);
+            }
+        }
     }
 }
 
@@ -257,6 +273,7 @@ const harnessScripts = {
     'design:export-tokens': 'node scripts/export-design-tokens.mjs',
     'design:scaffold-ui': 'node scripts/scaffold-ui-kit.mjs',
     'design:showcase': 'node scripts/generate-design-showcase.mjs',
+    'check:security:antipatterns': 'node scripts/verify-security-antipatterns.mjs',
     'check:dead-code': 'knip',
     'check:schema-drift': 'node scripts/verify-schema-drift.mjs',
     'check:debug-leftovers': 'node scripts/verify-no-debug-leftovers.mjs',
