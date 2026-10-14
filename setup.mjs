@@ -56,6 +56,32 @@ for (const dir of dirsToCreate) {
     }
 }
 
+// 1.1. Обеспечиваем изоляцию секретов в .gitignore
+const gitignorePath = path.join(targetDir, '.gitignore');
+const requiredIgnores = [
+    '.env',
+    '.env.local',
+    '.env.*.local',
+    '.dev.vars',
+    '.ci-verified.json',
+    '*.pem',
+    '*.key'
+];
+if (fs.existsSync(gitignorePath)) {
+    let giContent = fs.readFileSync(gitignorePath, 'utf-8');
+    let added = 0;
+    for (const item of requiredIgnores) {
+        if (!giContent.includes(item)) {
+            giContent += `\n${item}`;
+            added++;
+        }
+    }
+    if (added > 0) {
+        fs.writeFileSync(gitignorePath, giContent + '\n', 'utf-8');
+        console.log(`🛡️ [Gitignore Guard] Добавлено ${added} защитных правил для секретов в .gitignore.`);
+    }
+}
+
 // 2. Копируем проверочные скрипты верификации (scripts/)
 const scriptsSourceDir = path.join(__dirname, 'scripts');
 const scriptsTargetDir = path.join(targetDir, 'scripts');
@@ -223,7 +249,10 @@ if (fs.existsSync(scopedRulesSrc)) {
         { folder: path.join('src', 'features'), ruleFile: 'features-AGENTS.md' },
         { folder: path.join('src', 'types'), ruleFile: 'types-AGENTS.md' },
         { folder: path.join('src', 'db'), ruleFile: 'db-AGENTS.md' },
-        { folder: path.join('src', 'utils'), ruleFile: 'utils-AGENTS.md' }
+        { folder: path.join('src', 'utils'), ruleFile: 'utils-AGENTS.md' },
+        { folder: path.join('src', 'bot'), ruleFile: 'bot-AGENTS.md' },
+        { folder: path.join('src', 'tma'), ruleFile: 'tma-AGENTS.md' },
+        { folder: path.join('src', 'features', 'tma'), ruleFile: 'tma-AGENTS.md' }
     ];
 
     for (const { folder, ruleFile } of folderMappings) {

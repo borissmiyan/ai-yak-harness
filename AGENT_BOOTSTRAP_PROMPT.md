@@ -66,3 +66,10 @@
 
 Подтверди готовность и покажи результат выполнения скрипта установки.
 ```
+
+12. **TELEGRAM BOT & MINI APP (TMA) ENGINEERING & SECURITY DOCTRINE:**
+   - **Secret Isolation:** `BOT_TOKEN`, webhook secrets и API ключи ботов хранятся СТРОГО в `.env`, `.dev.vars` (оба обязаны быть в `.gitignore`), либо в Secrets Store платформ (напр. `wrangler secret put BOT_TOKEN`). Категорически запрещено помещать секреты в `wrangler.toml [vars]`, клиентский бандл (`VITE_TELEGRAM_BOT_TOKEN`) или использовать их в качестве fallback в коде (`process.env.BOT_TOKEN || 'raw'`).
+   - **TMA Cryptographic Trust Boundary:** Любой бэкенд TMA (Cloudflare Workers, Supabase Edge Functions, Node.js) ОБЯЗАН валидировать подпись `initData` по алгоритму HMAC-SHA256 с использованием `BOT_TOKEN` перед обработкой `user_id`. Принимать `user_id` или `initDataUnsafe` из фронтенда на веру строго запрещено.
+   - **Bot Reply Keyboards Doctrine (D-03):** Постоянные пользовательские меню и действия в боте должны размещаться под полем ввода (`Keyboard`), а не спамить сообщениями в чат. Любые inline-кнопки обязаны немедленно вызывать `await ctx.answerCallbackQuery()`.
+   - **TMA Lifecycle & Viewport Hygiene:** При монтировании инициализировать `WebApp.ready()` и `WebApp.expand()`. При размонтировании экранов — очищать `MainButton.hide()`, `BackButton.hide()` и слушатели событий.
+   - **Timezone & Session Hygiene:** Все таймеры викторин, сессии и утренние напоминания обязаны учитывать локальные часовые пояса пользователей и иметь явную очистку по таймауту/выходу.

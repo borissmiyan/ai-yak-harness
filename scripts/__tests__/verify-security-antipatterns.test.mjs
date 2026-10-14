@@ -4,7 +4,11 @@ import {
     checkPublicAnonIdor,
     checkFrontendIdorLeaks,
     checkHardcodedSecretFallbacks,
-    checkClientSecretExposure
+    checkClientSecretExposure,
+    checkTmaBotSecretExposure,
+    checkTmaInitDataBypass,
+    checkWranglerVarsSecrets,
+    checkBotHardcodedTokens
 } from '../verify-security-antipatterns.mjs';
 
 describe('verify-security-antipatterns gate', () => {
@@ -113,6 +117,84 @@ describe('verify-security-antipatterns gate', () => {
         it('passes with explicit @security-gate-ignore directive', () => {
             const ignoredTs = "// @security-gate-ignore: legacy dev fallback\nconst secretKey = import.meta.env.VITE_CLOUDFLARE_R2_SECRET_ACCESS_KEY;";
             const violations = checkClientSecretExposure(ignoredTs, 'storageService.ts');
+            expect(violations.length).toBe(0);
+        });
+    });
+
+    describe('checkTmaBotSecretExposure (TMA & Bot Protection)', () => {
+        it('detects Telegram Bot Token exposed in client bundle via VITE_ or NEXT_PUBLIC_', () => {
+            const badCode = "const token = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;";
+            const violations = checkTmaBotSecretExposure(badCode, 'src/tma/auth.ts');
+            expect(violations.length).toBeGreaterThan(0);
+            expect(violations[0].message).toContain('TMA Client Secret Exposure');
+        });
+
+        it('passes when bot token is accessed via server-side process.env or Worker env', () => {
+            const goodCode = "const token = process.env.BOT_TOKEN || env.BOT_TOKEN;";
+            const violations = checkTmaBotSecretExposure(goodCode, 'src/server/auth.ts');
+            expect(violations.length).toBe(0);
+        });
+    });
+
+    describe('checkTmaInitDataBypass (TMA Cryptographic Verification)', () => {
+        it('detects unverified user extraction from initData query', () => {
+            const badCode = "const user = JSON.parse(new URLSearchParams(initData).get('user'));";
+            const violations = checkTmaInitDataBypass(badCode, 'src/routes/auth.ts');
+            expect(violations.length).toBeGreaterThan(0);
+            expect(violations[0].message).toContain('TMA Insecure Authentication');
+        });
+
+        it('passes when cryptographic validation function is invoked', () => {
+            const goodCode = `
+                const isValid = validateInitData(initData, process.env.BOT_TOKEN);
+                if (!isValid) throw new Error('Invalid signature');
+                const user = JSON.parse(new URLSearchParams(initData).get('user'));
+            `;
+            const violations = checkTmaInitDataBypass(goodCode, 'src/routes/auth.ts');
+            expect(violations.length).toBe(0);
+        });
+    });
+
+    describe('checkWranglerVarsSecrets (Cloudflare Secret Hygiene)', () => {
+        it('detects BOT_TOKEN or SECRET defined in [vars] of wrangler.toml', () => {
+            const badToml = `
+                name = "my-bot"
+                main = "src/index.ts"
+                
+                [vars]
+                DAILY_HOUR = "5"
+                BOT_TOKEN = "1234567890:AAH12345678901234567890123456789012"
+            `;
+            const violations = checkWranglerVarsSecrets(badToml, 'wrangler.toml');
+            expect(violations.length).toBeGreaterThan(0);
+            expect(violations[0].message).toContain('Wrangler.toml Plaintext Secret');
+        });
+
+        it('passes when [vars] contains only non-sensitive configuration', () => {
+            const goodToml = `
+                name = "my-bot"
+                main = "src/index.ts"
+                
+                [vars]
+                DAILY_HOUR = "5"
+                ENVIRONMENT = "production"
+            `;
+            const violations = checkWranglerVarsSecrets(goodToml, 'wrangler.toml');
+            expect(violations.length).toBe(0);
+        });
+    });
+
+    describe('checkBotHardcodedTokens (Grammy, Telegraf, Discord)', () => {
+        it('detects literal bot token string in Bot constructor', () => {
+            const badCode = "const bot = new Bot('1234567890:AAH12345678901234567890123456789012');";
+            const violations = checkBotHardcodedTokens(badCode, 'src/bot/index.ts');
+            expect(violations.length).toBeGreaterThan(0);
+            expect(violations[0].message).toContain('Hardcoded Bot Token in Constructor');
+        });
+
+        it('passes when Bot is initialized with variable', () => {
+            const goodCode = "const bot = new Bot(process.env.BOT_TOKEN);";
+            const violations = checkBotHardcodedTokens(goodCode, 'src/bot/index.ts');
             expect(violations.length).toBe(0);
         });
     });

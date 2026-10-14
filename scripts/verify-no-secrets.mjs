@@ -1,11 +1,16 @@
 #!/usr/bin/env node
-import { execSync } from 'child_process';
+import { execSync } from "child_process";
 
 /**
  * 🛡️ Pre-Commit Secret Scanner (Tier-3 AI Harness Gate)
  * 
- * Предотвращает случайную фиксацию в Git приватных ключей, боевых токенов Supabase,
- * сервисных ролей и паролей, сгенерированных или вставленных ИИ-агентом.
+ * Предотвращает случайную фиксацию в Git:
+ * - Приватных ключей (RSA, EC, OpenSSH)
+ * - Боевых токенов Telegram-ботов и TMA секретов
+ * - Discord, Slack, OpenAI, Anthropic, Gemini API ключей
+ * - Cloudflare Wrangler [vars] открытых секретов
+ * - Supabase Service Role JWT и CLI токенов
+ * - Файлов с секретами (.env, .dev.vars, *.pem, *.key)
  * 
  * Если это намеренная фикстура для теста (mock):
  * Запустите с флагом: ALLOW_SECRETS=true git commit ...
@@ -13,21 +18,21 @@ import { execSync } from 'child_process';
 
 function runCommand(cmd) {
     try {
-        return execSync(cmd, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+        return execSync(cmd, { encoding: "utf-8", stdio: ["pipe", "pipe", "ignore"] }).trim();
     } catch {
-        return '';
+        return "";
     }
 }
 
 function verifyNoSecrets() {
-    if (process.env.ALLOW_SECRETS === 'true') {
-        console.log('🛡️ [Secret Scanner] Проверка секретов пропущена флагом ALLOW_SECRETS=true.');
+    if (process.env.ALLOW_SECRETS === "true") {
+        console.log("🛡️ [Secret Scanner] Проверка секретов пропущена флагом ALLOW_SECRETS=true.");
         process.exit(0);
     }
 
-    let diffOutput = runCommand('git diff --cached -U0');
+    let diffOutput = runCommand("git diff --cached -U0");
     if (!diffOutput) {
-        diffOutput = runCommand('git diff -U0');
+        diffOutput = runCommand("git diff -U0");
     }
 
     if (!diffOutput) {
@@ -36,68 +41,121 @@ function verifyNoSecrets() {
 
     const secretPatterns = [
         {
-            name: 'Private Encryption Key (RSA/EC/OpenSSH)',
+            name: "Private Encryption Key (RSA/EC/OpenSSH)",
             regex: /-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----/,
         },
         {
-            name: 'Supabase Service Role JWT Key',
+            name: "Telegram Bot API Token",
+            regex: /\b[0-9]{8,10}:[a-zA-Z0-9_-]{35}\b/,
+            filter: (match) => !match.includes("FAKE_BOT_TOKEN") && !match.includes("123456:FAKE") && !match.includes("0000000000:AA")
+        },
+        {
+            name: "Telegram Bot Token Assignment",
+            regex: /(?:BOT_TOKEN|TELEGRAM_TOKEN|TG_BOT_TOKEN)\s*[:=]\s*['"][0-9]{8,10}:[a-zA-Z0-9_-]{35}['"]/i,
+            filter: (match) => !match.includes("FAKE")
+        },
+        {
+            name: "Cloudflare Wrangler [vars] Plaintext Secret",
+            regex: /^\s*(?:BOT_TOKEN|API_KEY|SECRET|PASSWORD|PRIVATE_KEY)\s*=\s*['"][^'"]+['"]/i,
+            filter: (match, file) => file.endsWith("wrangler.toml") || file.endsWith("wrangler.json")
+        },
+        {
+            name: "Discord Bot Token",
+            regex: /\b[MN][A-Za-z\d]{23,25}\.[A-Za-z\d-_]{6}\.[A-Za-z\d-_]{27,38}\b/,
+            filter: (match) => !match.includes("mock") && !match.includes("test")
+        },
+        {
+            name: "Slack Webhook / App Token",
+            regex: /\bxox[baprs]-[0-9a-zA-Z]{10,48}\b/,
+        },
+        {
+            name: "OpenAI API Key",
+            regex: /\bsk-(?:proj-)?[a-zA-Z0-9_-]{48,}\b/,
+            filter: (match) => !match.includes("mock") && !match.includes("test")
+        },
+        {
+            name: "Anthropic API Key",
+            regex: /\bsk-ant-api03-[a-zA-Z0-9_-]{93,}\b/,
+        },
+        {
+            name: "Google Cloud / Gemini API Key",
+            regex: /\bAIzaSy[a-zA-Z0-9_-]{33}\b/,
+        },
+        {
+            name: "GitHub Personal Access Token",
+            regex: /\b(?:ghp_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{82})\b/,
+        },
+        {
+            name: "Supabase Service Role JWT Key",
             regex: /eyJ[a-zA-Z0-9_-]{20,}\.eyJ[a-zA-Z0-9_-]{20,}\.[a-zA-Z0-9_-]{20,}/,
             filter: (match) => {
                 try {
-                    const parts = match.split('.');
+                    const parts = match.split(".");
                     if (parts.length < 2) return false;
-                    const payload = Buffer.from(parts[1], 'base64').toString('utf-8');
-                    return payload.includes('service_role') || payload.includes('supabase_admin');
+                    const payload = Buffer.from(parts[1], "base64").toString("utf-8");
+                    return payload.includes("service_role") || payload.includes("supabase_admin");
                 } catch {
                     return false;
                 }
             }
         },
         {
-            name: 'Supabase CLI / Management Token (sbp_...)',
+            name: "Supabase CLI / Management Token (sbp_...)",
             regex: /\bsbp_[a-zA-Z0-9]{32,}\b/,
         },
         {
-            name: 'AWS Access Key ID',
+            name: "AWS Access Key ID",
             regex: /\bAKIA[0-9A-Z]{16}\b/,
         },
         {
-            name: 'Slack Webhook / App Token',
-            regex: /xox[baprs]-[0-9a-zA-Z]{10,}/,
-        },
-        {
-            name: 'PostgreSQL Connection URI with Password',
-            regex: /postgres(?:ql)?:\/\/[^:]+:[^@\s]{6,}@[^/\s]+/,
-            filter: (match) => !match.includes('localhost') && !match.includes('127.0.0.1') && !match.includes(':password@') && !match.includes(':test@')
+            name: "PostgreSQL Connection URI with Password",
+            regex: /postgres(?:ql)?:\/\/[^:]+:[^@\s]{6,}@[^\/\s]+/,
+            filter: (match) => !match.includes("localhost") && !match.includes("127.0.0.1") && !match.includes(":password@") && !match.includes(":test@")
         }
     ];
 
-    const lines = diffOutput.split('\n');
-    let currentFile = '';
+    const lines = diffOutput.split("\n");
+    let currentFile = "";
     const detectedIssues = [];
 
     for (const line of lines) {
-        if (line.startsWith('+++ b/')) {
+        if (line.startsWith("+++ b/")) {
             currentFile = line.slice(6);
+
+            // Проверка добавления запрещенных секретных файлов
+            if (/(?:^|\/)(?:\.env|\.dev\.vars)(?:\.local)?$/.test(currentFile) && !currentFile.endsWith(".env.example")) {
+                detectedIssues.push({
+                    file: currentFile,
+                    type: "Tracked Secret Environment File",
+                    snippet: "Attempting to commit .env or .dev.vars to git!"
+                });
+            }
+            if (/\.(?:pem|key|p12|pfx)$/i.test(currentFile)) {
+                detectedIssues.push({
+                    file: currentFile,
+                    type: "Cryptographic Certificate/Key File",
+                    snippet: "Attempting to commit private key or certificate to git!"
+                });
+            }
             continue;
         }
 
         // Проверяем только добавленные строки
-        if (!line.startsWith('+') || line.startsWith('+++')) {
+        if (!line.startsWith("+") || line.startsWith("+++")) {
             continue;
         }
 
         const addedContent = line.slice(1);
 
         // Пропускаем .env.example
-        if (currentFile.endsWith('.env.example')) {
+        if (currentFile.endsWith(".env.example")) {
             continue;
         }
 
         for (const pattern of secretPatterns) {
             const match = addedContent.match(pattern.regex);
             if (match) {
-                if (pattern.filter && !pattern.filter(match[0])) {
+                if (pattern.filter && !pattern.filter(match[0], currentFile)) {
                     continue;
                 }
                 detectedIssues.push({
@@ -110,11 +168,11 @@ function verifyNoSecrets() {
     }
 
     if (detectedIssues.length > 0) {
-        console.error('\n' + '='.repeat(68));
-        console.error('🛑 [AI HARNESS GATE] ОБНАРУЖЕНА ВОЗМОЖНАЯ УТЕЧКА СЕКРЕТОВ!');
-        console.error('='.repeat(68));
-        console.error('Сканер заблокировал коммит, так как в диффе обнаружены подозрительные');
-        console.error('ключи, токены доступа или приватные учетные данные.\n');
+        console.error("\n" + "=".repeat(68));
+        console.error("🛑 [AI HARNESS GATE] ОБНАРУЖЕНА ВОЗМОЖНАЯ УТЕЧКА СЕКРЕТОВ!");
+        console.error("=".repeat(68));
+        console.error("Сканер заблокировал коммит, так как в диффе обнаружены подозрительные");
+        console.error("ключи, токены доступа или приватные учетные данные.\n");
 
         detectedIssues.forEach(issue => {
             console.error(`  ❌ Файл: ${issue.file}`);
@@ -122,12 +180,13 @@ function verifyNoSecrets() {
             console.error(`     Код:  ${issue.snippet}...\n`);
         });
 
-        console.error('Что делать:');
-        console.error('  1. Удалите секреты из кода и вынесите их в переменные окружения (.env).');
-        console.error('  2. Если это мок-данные для теста, используйте абстрактные строки ("mock-token").');
-        console.error('  3. Если вы уверены в безопасности коммита:');
-        console.error('     👉 ALLOW_SECRETS=true git commit ...\n');
-        console.error('='.repeat(68) + '\n');
+        console.error("Что делать:");
+        console.error("  1. Вынесите секреты в .env или .dev.vars (добавьте их в .gitignore).");
+        console.error("  2. Для Cloudflare Workers используйте: wrangler secret put <NAME>");
+        console.error("  3. Если это мок-данные для теста, используйте абстрактные строки (\"mock-token\").");
+        console.error("  4. Если вы уверены в безопасности коммита:");
+        console.error("     👉 ALLOW_SECRETS=true git commit ...\n");
+        console.error("=".repeat(68) + "\n");
         process.exit(1);
     }
 

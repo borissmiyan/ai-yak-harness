@@ -173,6 +173,8 @@ npm run prepare
 | `types-AGENTS.md` | Правила для `src/types/`: строгая типизация, ноль `any`, семантическая фиксация DTO. |
 | `db-AGENTS.md` | Правила для `src/db/` или `supabase/`: неизменяемые миграции, индексы, RLS изоляция. |
 | `utils-AGENTS.md` | Правила для `src/utils/`: детерминированные чистые функции, 100% юнит-покрытие. |
+| `bot-AGENTS.md` | Правила для `src/bot/`: Telegram/Discord/Slack боты, Reply Keyboard доктрина (D-03), немедленный `answerCallbackQuery`, изоляция токенов. |
+| `tma-AGENTS.md` | Правила для `src/tma/`: Telegram Mini Apps, обязательная криптографическая верификация `initData` (HMAC-SHA256), нулевая утечка токенов в бандл, очистка `MainButton/BackButton`. |
 
 ### 6. Полный боевой комплект скиллов (`skills/`)
 

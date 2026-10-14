@@ -236,7 +236,7 @@ log_finding "Direct Object Mutation in Stores" "$RES"
 echo ""
 echo -e "${RED}🔴 CRITICAL: Unmemoized Context Provider Value${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS -E '<.*\.Provider\s+value=\{\s*\{' "$TARGET" 2>/dev/null || true)
+RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS -E '<.*\.Provider\s+value=\{\s*\{' "$TARGET" 2>/dev/null | grep -v '\.test\.' | grep -v '__tests__' || true)
 print_or_ok "$RES" "✅ Context providers seem to use memoized values"
 log_finding "Unmemoized Context Provider" "$RES"
 

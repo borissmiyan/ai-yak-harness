@@ -121,12 +121,12 @@ Every gate in AI Yak Harness is deterministic and fails with `exit 1`. However, 
 | :--- | :--- | :--- |
 | `verify-no-test-tampering.mjs` | Blocks editing existing tests (`*.test.*`, `*.spec.*`) and adding unauthorized `dependencies` | `ALLOW_TEST_MUTATION=true`<br>`ALLOW_DEP_MUTATION=true` |
 | `verify-diff-budget.mjs` | Limits changes to max **450 lines** and **10 files** per commit to prevent runaway refactoring | `ALLOW_LARGE_DIFF=true` |
-| `verify-no-secrets.mjs` | Blocks accidental commits of API tokens, private keys, Supabase Service Role keys | Remove secret from commit diff |
+| `verify-no-secrets.mjs` | Blocks accidental commits of Telegram Bot Tokens, TMA secrets, Discord/Slack/LLM API keys, private keys, Wrangler plaintext secrets | Remove secret from commit diff |
 | `verify-resource-hygiene.mjs` | Blocks `createObjectURL` without `revoke`, missing listener cleanups, unhandled intervals | `// @resource-hygiene-ignore: <reason>` |
 | `verify-memoization.mjs` | Enforces `React.memo` on all list items and cards (`*Card`, `*Row`, `*Item`) | `// @memo-gate-ignore: <reason>` |
 | `verify-no-circular.mjs` | Detects circular imports causing runtime `undefined` initialization bugs | `ALLOW_CIRCULAR=true` |
 | `verify-schema-drift.mjs` | Prevents uncommitted or drifting DB schemas and RPC contracts | `ALLOW_SCHEMA_MUTATION=true` |
-| `verify-security-antipatterns.mjs` | Catches dangerous `eval()`, unescaped `innerHTML`, and untrusted protocols | Fix vulnerability |
+| `verify-security-antipatterns.mjs` | Catches TMA initData spoofing, client bundle bot token leaks, plaintext wrangler.toml [vars], IDOR and RLS privilege escalations | Fix vulnerability |
 
 ---
 
