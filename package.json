@@ -8,6 +8,8 @@
   },
   "scripts": {
     "setup": "node setup.mjs",
+    "update": "node update.mjs",
+    "update:all": "node update.mjs --all",
     "check:design": "node scripts/verify-design-system.mjs",
     "check:design:fix": "node scripts/verify-design-system.mjs --fix",
     "design:export-tokens": "node scripts/export-design-tokens.mjs",
