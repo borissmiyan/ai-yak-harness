@@ -121,6 +121,7 @@ npm run prepare
 | `scaffold-ui-kit.mjs` | UI-Kit Scaffolder: генерация Button, Input, Badge, Card, SpringSheet со всеми 6 состояниями | — |
 | `generate-design-showcase.mjs` | Instant Showcase: генерация `design-showcase.html` с интерактивным тестером пружины | — |
 | `verify-memoization.mjs` | Контролирует `React.memo` на всех карточках и строках списков | `// @memo-gate-ignore: <причина>` |
+| `verify-component-budget.mjs` | Контролирует бюджет размера `.tsx` (золотой стандарт 150–250 строк, warn 300, error 500) и хуков `use*.ts` (warn 150, error 250) | Реестр `configs/budget-exceptions.json` |
 | `verify-no-circular.mjs` | Предотвращает циклические импорты и `undefined` при старте | `ALLOW_CIRCULAR=true` |
 | `verify-schema-drift.mjs` | Предотвращает несанкционированный дрейф контрактов БД и RPC типов | `ALLOW_SCHEMA_MUTATION=true` |
 | `harness-worktree.mjs` | Управляет изолированными песочницами агентов через ephemeral `git worktree` | — |
@@ -137,7 +138,7 @@ npm run prepare
 | `knip.json` | Детектор мертвого кода, неиспользуемых экспортов и типов (устраняет Context Rot) |
 | `tsconfig.test.json` | Включает файлы тестов в строгую проверку типов (`tsc -b`) |
 | `stryker.config.mjs` | Конфигурация мутационного тестирования Stryker с Vitest runner (On-Demand) |
-| `eslint.config.harness.js` | AST-правила: запрет сырых эмодзи в JSX, FSD Layer Boundaries, лимит 500 строк, SonarJS (дубликаты условий/веток), Promise правила |
+| `eslint.config.harness.js` | AST-правила: запрет сырых эмодзи, TSX Budget (150–250 строк, warn 300, error 500), FSD Boundaries, SonarJS, Promise |
 | `vite.config.snippet.ts` | Готовый сниппет подключения `rollup-plugin-visualizer` (Pillar 3) |
 | `react-scan.snippet.ts` | Готовый сниппет подключения визуального профайлера `react-scan` в DEV режиме (Pillar 8) |
 | `playwright.config.snippet.ts`| Готовый сниппет настройки Playwright для тестов утечек памяти и визуальной регрессии |

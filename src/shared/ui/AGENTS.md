@@ -23,6 +23,6 @@
 
 ## 🚫 Forbidden Antipatterns
 
-- ❌ Ad-hoc inline CSS or arbitrary unvetted hex colors.
-- ❌ Files exceeding 500 lines (split into sub-components and hooks).
+- ❌ Files exceeding 500 lines (Hard Ceiling) or 300 lines (Warning). Target size for UI-Kit is 50–150 clean lines.
+- ❌ Heavy presentation components: if JSX > 40-50 lines, isolate sub-components.
 - ❌ Business logic or direct network fetching inside presentation components.

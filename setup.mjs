@@ -281,6 +281,8 @@ const configsToCopy = [
     { src: path.join(__dirname, 'configs', 'knip.json'), dest: path.join(targetDir, 'knip.json'), label: 'Knip Config' },
     { src: path.join(__dirname, 'configs', 'tsconfig.test.json'), dest: path.join(targetDir, 'tsconfig.test.json'), label: 'TypeScript Test Config' },
     { src: path.join(__dirname, 'configs', 'stryker.config.mjs'), dest: path.join(targetDir, 'stryker.config.mjs'), label: 'Stryker Mutator Config' },
+    { src: path.join(__dirname, 'configs', 'harness-limits.json'), dest: path.join(targetDir, 'configs', 'harness-limits.json'), label: 'Harness Limits Manifest (harness-limits.json)' },
+    { src: path.join(__dirname, 'configs', 'budget-exceptions.json'), dest: path.join(targetDir, 'configs', 'budget-exceptions.json'), label: 'Component Budget Exceptions Registry (budget-exceptions.json)' },
     { src: path.join(__dirname, 'configs', 'eslint.config.harness.js'), dest: path.join(targetDir, 'configs', 'eslint.config.harness.js'), label: 'ESLint AST Harness Rules' },
     { src: path.join(__dirname, 'configs', 'vite.config.snippet.ts'), dest: path.join(targetDir, 'configs', 'vite.config.snippet.ts'), label: 'Vite Visualizer Snippet' },
     { src: path.join(__dirname, 'configs', 'react-scan.snippet.ts'), dest: path.join(targetDir, 'configs', 'react-scan.snippet.ts'), label: 'React-Scan Profiler Snippet' },
@@ -334,6 +336,7 @@ const harnessScripts = {
     'check:schema-drift': 'node scripts/verify-schema-drift.mjs',
     'check:debug-leftovers': 'node scripts/verify-no-debug-leftovers.mjs',
     'check:large-files': 'node scripts/verify-no-large-files.mjs',
+    'check:component-budget': 'node scripts/verify-component-budget.mjs',
     'audit': 'bash .agents/skills/codebase-audit/scripts/audit_cycle.sh .',
     'audit:ci': 'bash .agents/skills/codebase-audit/scripts/audit_cycle.sh . --ci --fail-on=CRITICAL',
     'audit:fix': 'bash .agents/skills/codebase-audit/scripts/audit_cycle.sh . --fix',
@@ -394,14 +397,14 @@ console.log('\n' + '='.repeat(70));
 console.log('✅ AI Yak Harness успешно подключен в полном объеме!');
 console.log('='.repeat(70));
 console.log('Установленные подсистемы:');
-console.log('  1. 🛡️  8 инженерных столпов качества (diff-budget, secrets, hygiene, memo, etc.)');
+console.log('  1. 🛡️  9 инженерных столпов качества (diff-budget, component-budget, secrets, hygiene, memo, etc.)');
 console.log('  2. 🧠 7 скиллов для агента (.agents/skills/: critic, brainstorming, plans, audit)');
 console.log('  3. 📑 Архитектурный контекст и ADR (.planning/CONTEXT.md, decisions/)');
 console.log('  4. 🎨 Документация и дизайн-система (PURPOSE, DESIGN-AI, COMPONENTS, ANTIPATTERNS)');
 console.log('  5. 📂 Локальные правила поддиректорий (folder-scoped AGENTS.md)');
 console.log('\nСледующие шаги:');
 console.log('1. Убедитесь, что установлены devDependencies:');
-console.log('   npm i -D husky lint-staged knip dpdm eslint-plugin-sonarjs eslint-plugin-promise rollup-plugin-visualizer @stryker-mutator/core @stryker-mutator/vitest-runner snyk react-scan');
+console.log('   npm i -D husky lint-staged knip dpdm eslint-plugin-react eslint-plugin-sonarjs eslint-plugin-promise rollup-plugin-visualizer @stryker-mutator/core @stryker-mutator/vitest-runner snyk react-scan vitest');
 console.log('2. Инициализируйте хуки: npm run prepare');
 console.log('3. Заполните .planning/CONTEXT.md и PURPOSE.md');
 console.log('\n⚠️ ВАЖНО: Stryker CLI (npm run test:mutate) и Snyk (npm run check:security:snyk)');

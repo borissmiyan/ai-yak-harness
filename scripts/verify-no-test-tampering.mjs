@@ -43,6 +43,10 @@ function verifyHarnessIntegrity() {
         const pkgPath = path.resolve(process.cwd(), 'package.json');
         if (fs.existsSync(pkgPath)) {
             const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+            if (pkg.name === 'ai-yak-harness') {
+                // В самом мета-репозитории ai-yak-harness проверка клиентских tsc/eslint пропускается
+                return;
+            }
             const scripts = pkg.scripts || {};
 
             const requiredSnippets = [

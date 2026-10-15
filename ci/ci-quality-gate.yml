@@ -39,8 +39,6 @@ jobs:
 
       - name: 🔄 Verify Zero Circular Dependencies
         run: node scripts/verify-no-circular.mjs
-        env:
-          ALLOW_CIRCULAR: true
 
       - name: 🧹 Verify Resource Hygiene & Memory Leaks
         run: node scripts/verify-resource-hygiene.mjs
@@ -50,6 +48,9 @@ jobs:
 
       - name: 🔒 Verify Database Schema Drift
         run: node scripts/verify-schema-drift.mjs
+
+      - name: 📏 Verify TSX Component Size Budget (150-250 lines)
+        run: node scripts/verify-component-budget.mjs
 
       - name: 🛡️ Run Unified Quality Check (Types + Lint + Tests)
         run: npm run check

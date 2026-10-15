@@ -38,6 +38,9 @@ User / Organization (id, email, role, created_at)
 | ID | Title | Status | Date | Key Invariant / Outcome |
 | :--- | :--- | :--- | :--- | :--- |
 | [D-01](./decisions/D-01-initial-architecture.md) | Initial Architecture & Core Invariants | Accepted | 2026-10-09 | Strict typing, offline resilience, and zero unmocked network tests |
+| [D-02](./decisions/D-02-security-antipatterns-gate.md) | Security Anti-Pattern & IDOR Pre-Commit Gate | Accepted | 2026-10-13 | UUID tokens on public links, safe RLS UPDATE triggers, safe RPCs |
+| [D-03](./decisions/D-03-bot-reply-keyboards-doctrine.md) | Bot Reply Keyboards & Inline Callback Latency Doctrine | Accepted | 2026-10-14 | Docked Reply Keyboards for navigation, instant callback answer, zero token leaks |
+| [D-04](./decisions/D-04-component-size-and-decomposition-doctrine.md) | Component Size, Hook Guard & Decomposition Doctrine | Accepted | 2026-10-15 | 150–250 lines gold standard, 300 warn, 500 error; hooks 150/250 lines |
 
 ---
 

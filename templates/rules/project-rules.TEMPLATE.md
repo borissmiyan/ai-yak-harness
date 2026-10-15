@@ -17,7 +17,10 @@
    - Max 450 code lines and 10 files per commit.
 4. **Resource Hygiene:**
    - Zero unrevoked Object URLs (`createObjectURL`), zero uncleaned event listeners or timers.
-5. **Component Memoization:**
+5. **Component Architecture & TSX Size Budget (150–250 lines):**
+   - Presentational UI-kit: 50–150 lines. Containers/screens: 150–250 lines.
+   - Linter warning at 300 lines (component function max 200 lines). Emergency hard limit: 500 lines.
+   - Enforce 3 rules of decomposition (extract hook, evict utils/constants, isolate heavy JSX).
    - All list items and cards (`*Card`, `*Row`, `*Item`) must be wrapped in `React.memo`.
 6. **5-Stage Development Cycle:**
    - 1. Research -> 2. Plan & Spec -> 3. Adversarial Critic Audit -> 4. TDD Execution -> 5. Verification.

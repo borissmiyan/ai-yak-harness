@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Registry of authorized component/hook size exceptions. Bypasses via inline comments in source code are strictly forbidden.",
+  "exceptions": {}
+}

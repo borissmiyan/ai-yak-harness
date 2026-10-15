@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI Yak Harness Limits (Single Source of Truth)",
+  "description": "Central threshold configuration for AST linters, pre-commit gates, and CI quality pipelines.",
+  "component": {
+    "tsx_gold_max": 250,
+    "tsx_warn": 300,
+    "tsx_error": 500,
+    "tsx_function_warn": 200,
+    "hook_warn": 150,
+    "hook_error": 250,
+    "max_use_state_in_tsx": 3
+  },
+  "diff_budget": {
+    "max_lines": 450,
+    "max_files": 10
+  },
+  "file_size": {
+    "max_mb": 2.0
+  }
+}

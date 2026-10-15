@@ -469,14 +469,39 @@ describe('Property-Based Invariants: calcStageHealth', () => {
   2. Защитный шлюз добавлен в `.husky/pre-commit` и GitHub Actions CI (`.github/workflows/ci.yml`).
   3. Все исторические циклические зависимости в `src/` (5 циклов) устранены (вынесен `DiscardConfirmDialog.tsx`, декуплен `errorLoggingService.ts`, создан `types.ts`). В кодовой базе зафиксировано **0 циклических зависимостей** на 514 файлов.
 
-### 6.2 Ограничение размера файлов и когнитивной сложности (500-Line Limit Guard)
-* **Проблема (Attention Drift):** Когда файл превышает 500 строк, вероятность галлюцинаций LLM при редактировании возрастает экспоненциально. Агент «забывает» код в начале файла и плодит дубликаты стейтов или методов.
-* **Реализация в проекте:**
-  - В `eslint.config.js` подключено правило:
+### 6.2 Доктрина размера компонентов и когнитивной сложности (.TSX Size, Hook Guard & Decomposition Doctrine — ADR D-04)
+* **Стандарт Principal Frontend Architect:** Золотой стандарт индустрии для `.tsx` файла — **150–250 строк**; отметка в **300 строк** считается сигналом к рефакторингу, а **500 строк** в AAA-проектах — это жесткий аварийный потолок (Hard Limit), после которого код не пропускается на Code Review и в CI.
+* **Единый источник истины и реестр исключений:** Все числовые лимиты зафиксированы в `configs/harness-limits.json`. Исключения регистрируются ТОЛЬКО в `configs/budget-exceptions.json` (inline-комментарии `// @component-budget-ignore` строго запрещены).
+* **Реальная градация размера `.tsx` в больших проектах:**
+  - **50–150 строк (Идеал для UI-кита):** Глупые (Presentational) компоненты — кнопки, карточки, инпуты, простые модалки. Читаются за 10 секунд без прокрутки экрана.
+  - **150–250 строк (Золотая середина):** Умные компоненты (Smart/Container), виджеты, экраны или сложные формы. Здесь живет связка данных и верстки.
+  - **300 строк (Желтая зона / Tech Debt):** Срабатывает предупреждение линтера (`max-lines: warn` на 300 строк, функция компонента до 200 строк). Компонент начал совмещать слишком много ролей.
+  - **500 строк (Красная зона / Hard Limit):** Аварийный потолок. Блокировка в CI и pre-commit (`scripts/verify-component-budget.mjs`, ESLint `error` на 500).
+* **Hook Guard (`**/use*.ts`):**
+  - Защита от превращения хуков в «мусорную корзину» компонентов.
+  - Предупреждение на **150 строк**, жесткий потолок / блокировка CI на **250 строк**.
+  - Тяжелая логика декомпозируется на независимые доменные субхуки (`useFeatureFilters`, `useFeaturePagination`).
+* **Проблема раздувания и деградации LLM (Attention Drift):**
+  Когда `.tsx` разрастается до 400–500 строк, в нем перемешиваются 4 слоя: типы, стейты/эффекты, хелперы/константы и разметка Tailwind. У ИИ-ассистентов размывается окно внимания: модель начинает терять контекст в начале файла, забывает закрывать теги, ломает соседнюю бизнес-логику при правке верстки и расходует в 3–5 раз больше токенов на каждую итерацию.
+* **3 правила декомпозиции:**
+  1. **Вынос логики в кастомный хук (`use<ComponentName>.ts`):** Если в компоненте > 3 `useState`, есть `useEffect` или 4–5 обработчиков — вся логика выносится в хук. В самом `.tsx` остается одна строка вызова хука и чистый JSX (-30..50% объема файла).
+  2. **Выселение статики и чистых функций (`utils.ts`, `constants.ts`, `types.ts`):** Любая функция, не зависящая от жизненного цикла React (расчеты, парсинг, списки опций), переносится в модули хелперов.
+  3. **Изоляция тяжелых фрагментов JSX (Sub-components):** Любой логический блок JSX длиннее 40–50 строк (шапка, фильтры, карточка элемента списка) выносится в отдельный подкомпонент (`FeatureHeader.tsx`, `FeatureFilter.tsx`). Запрещено объявлять вложенные компоненты в теле функции (`react/no-unstable-nested-components`).
+* **Двухуровневый шлюз контроля:**
+  - **ESLint 9 Flat Config (`configs/eslint.config.harness.js`):**
     ```javascript
-    'max-lines': ['warn', { max: 500, skipBlankLines: true, skipComments: true }]
+    // **/*.tsx
+    'max-lines': ['warn', { max: limits.tsx.warn, skipBlankLines: true, skipComments: true }],
+    'max-lines-per-function': ['warn', { max: limits.tsx.maxFunctionLines, skipBlankLines: true, skipComments: true, IIFEs: true }],
+    'react/no-unstable-nested-components': ['error', { allowAsProps: false }],
+    // **/use*.ts (Hook Guard)
+    'max-lines': ['warn', { max: limits.hooks.warn, skipBlankLines: true, skipComments: true }],
+    // **/*.{ts,tsx} (Emergency Hard Ceiling)
+    'max-lines': ['error', { max: limits.tsx.error, skipBlankLines: true, skipComments: true }],
     ```
-  - Исключения даны только для автогенерируемых каталогов документации (`docs/**`) и одноразовых скриптов миграции.
+    *Флаги `skipBlankLines` и `skipComments` гарантируют, что разработчики и ИИ не штрафуются за отступы и полезные JSDoc-комментарии.*
+  - **CLI Verification Gate (`scripts/verify-component-budget.mjs`):** Детерминированная проверка в `.husky/pre-commit` и CI (`npm run check:component-budget`). Читает Git Index (`git show :file`) с `-z` разделителем для предотвращения обхода через нескоммиченные изменения на диске.
+
 
 ### 6.3 Hermetic Testing & Детерминированное окружение (Zero-Network Test Gate)
 * **Проблема:** ИИ генерирует тесты, зависящие от текущей системной даты (`new Date()`), часового пояса разработчика (`Intl`), локали браузера или пытающиеся слать реальные HTTP-запросы в сеть.
@@ -531,7 +556,7 @@ describe('Property-Based Invariants: calcStageHealth', () => {
 | 10 | **Tier-3** | Микро-бенчмарк инвариантов скорости математики | ✅ Активен | `compensationBenchmark.test.ts` |
 | 11 | **Tier-3** | Охотник за флаки-тестами (Stress Runner) | ✅ Активен | `scripts/test-flaky.mjs` (`npm run test:flaky`) |
 | 12 | **Tier-3** | Zero Circular Dependencies Gate | ✅ Активен | `scripts/verify-no-circular.mjs` (`check:circular`) |
-| 13 | **Tier-3** | Контроль когнитивного размера файлов (500 строк) | ✅ Активен | `eslint.config.js` (`max-lines`) |
+| 13 | **Tier-3** | Бюджет размера компонентов (150–250 строк, warn 300, error 500) | ✅ Активен | `eslint.config.harness.js` + `scripts/verify-component-budget.mjs` |
 | 14 | **Tier-3** | Герметичная тестовая среда (Zero Unmocked Network) | ✅ Активен | `src/test/setup.ts` + `vitest.config.ts` |
 | 15 | **Tier-3** | Предохранитель отката (Agent Circuit Breaker) | ✅ Активен | `scripts/harness-rollback.mjs` (`harness:rollback`) |
 | 16 | **Tier-4** | Детерминизм часового пояса (TZ UTC Guard) | ✅ Активен | `vitest.config.ts` (TZ: 'UTC') + `timezoneHermeticity.test.ts` |

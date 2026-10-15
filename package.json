@@ -1,7 +1,7 @@
 {
   "name": "ai-yak-harness",
-  "version": "1.0.0",
-  "description": "Universal AI Engineering Harness Starter Kit — Deterministic verification, anti-tampering, resource hygiene, AST linting, and 8-tier safety gates for autonomous AI agents.",
+  "version": "1.1.0",
+  "description": "Universal AI Engineering Harness Starter Kit — Deterministic verification, anti-tampering, resource hygiene, AST linting, and 9-tier safety gates for autonomous AI agents.",
   "type": "module",
   "bin": {
     "ai-yak-harness": "./setup.mjs"
@@ -16,9 +16,14 @@
     "check:security:antipatterns": "node scripts/verify-security-antipatterns.mjs",
     "check:debug-leftovers": "node scripts/verify-no-debug-leftovers.mjs",
     "check:large-files": "node scripts/verify-no-large-files.mjs",
+    "check:component-budget": "node scripts/verify-component-budget.mjs",
+    "test": "npx vitest run scripts/__tests__ test/examples",
     "audit": "bash skills/codebase-audit/scripts/audit_cycle.sh .",
     "audit:ci": "bash skills/codebase-audit/scripts/audit_cycle.sh . --ci --fail-on=CRITICAL",
     "audit:fix": "bash skills/codebase-audit/scripts/audit_cycle.sh . --fix"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
   },
   "keywords": [
     "ai-agent",
