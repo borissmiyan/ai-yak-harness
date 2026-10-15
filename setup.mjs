@@ -5,7 +5,7 @@ import readline from 'readline';
 import { fileURLToPath } from 'url';
 
 /**
- * 🚀 AI Yak Harness Universal Installer & Project Synchronizer (v1.1.0)
+ * 🚀 AI Yak Harness Universal Installer & Project Synchronizer (v1.2.0)
  * 
  * Единый инструмент установки и автоматического обновления инженерного контура:
  * - Установка с нуля: подключает 9 столпов качества, документацию, ADR и скиллы.
@@ -229,7 +229,7 @@ export function installOrUpdateProject(targetDir) {
         fs.mkdirSync(path.dirname(harnessGuideDest), { recursive: true });
         fs.copyFileSync(harnessGuideSrc, harnessGuideDest);
         modifiedElements++;
-        console.log(`  📚 ${isUpdate ? 'Актуализирован' : 'Установлен'} справочник: docs/AI_HARNESS_GUIDE.md (v1.1.0)`);
+        console.log(`  📚 ${isUpdate ? 'Актуализирован' : 'Установлен'} справочник: docs/AI_HARNESS_GUIDE.md (v1.2.0)`);
     }
 
     // 9. Архитектурные решения (ADR)

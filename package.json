@@ -1,6 +1,6 @@
 {
   "name": "ai-yak-harness",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Universal AI Engineering Harness Starter Kit — Deterministic verification, anti-tampering, resource hygiene, AST linting, and 9-tier safety gates for autonomous AI agents.",
   "type": "module",
   "bin": {
