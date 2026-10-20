@@ -327,6 +327,7 @@ export function installOrUpdateProject(targetDir) {
         'check:security:antipatterns': 'node scripts/verify-security-antipatterns.mjs',
         'check:dead-code': 'knip',
         'check:schema-drift': 'node scripts/verify-schema-drift.mjs',
+        'check:supabase-compliance': 'node scripts/verify-supabase-compliance.mjs',
         'db:pull-schema': 'node scripts/sync-schema-snapshot.mjs',
         'check:debug-leftovers': 'node scripts/verify-no-debug-leftovers.mjs',
         'check:large-files': 'node scripts/verify-no-large-files.mjs',
