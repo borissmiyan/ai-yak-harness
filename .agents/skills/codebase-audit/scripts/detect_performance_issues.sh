@@ -123,13 +123,13 @@ else
 fi
 
 echo ""
-echo -e "${YELLOW}🟡 WARNING: Inline functions in JSX (onClick={() => ...)${NC}"
+echo -e "${YELLOW}🟡 WARNING: Inline functions in JSX (breaking memoization on custom components)${NC}"
 echo "-------------------------------"
 grep -rn --include='*.tsx' $EXCLUDE_OPTS \
-  -E 'on[A-Z]\w+=\{(\(\)|e|\w+)\s*=>' \
-  "$TARGET" 2>/dev/null | grep -v '.test.' | head -30 || echo "  ✅ None found"
-echo "  NOTE: single-line heuristic — misses handlers a formatter wraps onto"
-echo "  the next line (e.g. \`onClick={() =>\` followed by the call below it)."
+  -E '<[A-Z]\w+[^>]*\s+on[A-Z]\w+=\{(\(\)|e|\w+)\s*=>' \
+  "$TARGET" 2>/dev/null | grep -v '.test.' || echo "  ✅ None found"
+echo "  NOTE: flags inline function handlers passed to custom React components"
+echo "  which break React.memo and cause unnecessary re-renders (see references/react_performance.md)."
 
 echo ""
 echo -e "${YELLOW}🟡 WARNING: Missing React.memo on list items${NC}"
@@ -138,7 +138,7 @@ while IFS= read -r f; do
   if ! grep -q 'React.memo\|memo(' "$f" 2>/dev/null; then
     echo "  ⚠️  $f — list-like component without React.memo"
   fi
-done < <(find "$TARGET" \( -name '*Item*.tsx' -o -name '*Row*.tsx' -o -name '*Card*.tsx' \) ! -path '*/.agent/*' ! -path '*/.agents/*' ! -path '*/node_modules/*' ! -path '*/dist/*' ! -path '*/build/*' ! -path '*/.git/*' ! -path '*/backups/*' ! -path '*/scratch/*' ! -path '*/graphify-out/*' 2>/dev/null)
+done < <(find "$TARGET" \( -name '*Item*.tsx' -o -name '*Row*.tsx' -o -name '*Card*.tsx' \) ! -name '*.test.*' ! -name '*.spec.*' ! -path '*/.agent/*' ! -path '*/.agents/*' ! -path '*/node_modules/*' ! -path '*/dist/*' ! -path '*/build/*' ! -path '*/.git/*' ! -path '*/backups/*' ! -path '*/scratch/*' ! -path '*/graphify-out/*' 2>/dev/null)
 echo "  (End of check — filename heuristic only; a component can legitimately"
 echo "  skip memo if it's cheap to render or rarely re-rendered, see"
 echo "  references/react_performance.md → 'When React.memo is WASTEFUL'.)"
@@ -162,10 +162,15 @@ echo "  Performance, point 5. A hit here doesn't distinguish decorative loops"
 echo "  from functional ones (e.g. a loading spinner) — verify against the file."
 
 echo ""
-echo -e "${CYAN}📊 INFO: Large files (>500 lines)${NC}"
+echo -e "${CYAN}📊 INFO: File size overview (> 250 lines)${NC}"
 echo "-------------------------------"
-find "$TARGET" \( -name '*.ts' -o -name '*.tsx' \) ! -path '*/.agent/*' ! -path '*/.agents/*' ! -path '*/node_modules/*' ! -path '*/dist/*' ! -path '*/build/*' ! -path '*/.git/*' ! -path '*/backups/*' ! -path '*/scratch/*' ! -path '*/graphify-out/*' ! -name '*.test.*' -print0 2>/dev/null \
-  | xargs -0 wc -l 2>/dev/null | awk '$1 > 500 && $2 != "total" {print $1" lines: "$2}' || echo "  ✅ All files under 500 lines"
+find "$TARGET" \( -name '*.ts' -o -name '*.tsx' \) \
+  ! -path '*/.agent/*' ! -path '*/.agents/*' ! -path '*/node_modules/*' \
+  ! -path '*/dist/*' ! -path '*/build/*' ! -path '*/.git/*' \
+  ! -path '*/backups/*' ! -path '*/scratch/*' ! -path '*/graphify-out/*' \
+  ! -path '*/e2e/*' ! -name '*.test.*' ! -name '*.spec.*' ! -name '*.d.ts' \
+  -print0 2>/dev/null \
+  | xargs -0 wc -l 2>/dev/null | awk '$1 > 250 && $2 != "total" {print $1" lines: "$2}' | sort -nr || echo "  ✅ All files under 250 lines"
 
 echo ""
 echo -e "${CYAN}📊 INFO: Eager imports in App.tsx / router${NC}"

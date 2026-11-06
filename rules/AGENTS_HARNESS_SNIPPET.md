@@ -82,3 +82,9 @@
    - **Bot Reply Keyboards Doctrine (D-03):** Постоянные пользовательские меню и действия в боте должны размещаться под полем ввода (`Keyboard`), а не спамить сообщениями в чат. Любые inline-кнопки обязаны немедленно вызывать `await ctx.answerCallbackQuery()`.
    - **TMA Lifecycle & Viewport Hygiene:** При монтировании инициализировать `WebApp.ready()` и `WebApp.expand()`. При размонтировании экранов — очищать `MainButton.hide()`, `BackButton.hide()` и слушатели событий.
    - **Timezone & Session Hygiene:** Все таймеры викторин, сессии и утренние напоминания обязаны учитывать локальные часовые пояса пользователей и иметь явную очистку по таймауту/выходу.
+
+13. **ESM RUNTIME HYGIENE & ARTIFACT PRE-FLIGHT VERIFICATION:**
+   - **ESM Naked Globals:** В проектах с `"type": "module"` строго запрещено прямое обращение к CJS-глобалам `__dirname` и `__filename`. Они обязаны вычисляться через `fileURLToPath(import.meta.url)` или `import.meta.dirname` (проверяется `npm run check:esm` / `scripts/verify-esm-and-path-hygiene.mjs`).
+   - **Path Geometry & Bundle Depth:** Запрещены слепые относительные переходы `path.join(__dirname, '../../...')` в серверных/Electron-модулях без валидации `fs.existsSync` или использования `app.getAppPath()`, так как глубина директории после бандлинга (`dist/`, `dist-electron/`) смещается относительно исходников.
+   - **Network Endpoint Fallback Hygiene:** Запрещено хардкодить `http://localhost:<port>` в UI-компонентах без строгой изоляции окружения (`isRemote`) во избежание `ERR_CONNECTION_REFUSED`.
+   - **Artifact Pre-Flight & Smoke Gate:** В десктопных приложениях сборка обязана верифицироваться гейтом `npm run check:smoke` (`scripts/verify-electron-smoke.mjs`), подтверждающим синтаксическую валидность `preload.cjs`, главного процесса и целостность встроенных ассетов.

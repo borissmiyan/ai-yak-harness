@@ -243,19 +243,19 @@ return data.type === 'income' ? <Income /> : <Expense />;
 
 Each file (Component, Hook, Utility) should have one primary responsibility. Large files degrade LLM attention windows, cause merge conflicts, and trigger re-render storms.
 
-**Industry Standard for `.tsx` files:**
+**Industry Standard for `.tsx` / `.ts` files:**
 - **50–150 lines (UI-kit):** Presentational components (buttons, inputs, cards).
-- **150–250 lines (Enterprise Gold Standard):** Smart / Container components, screens, widgets.
-- **300–400 lines (Yellow Zone / Tech Debt):** Linter warning (`max-lines: warn`). Mandatory refactoring signal.
-- **500 lines (Red Zone / Emergency Hard Ceiling):** Critical blocker in CI & pre-commit.
+- **150–250 lines (Enterprise Gold Standard):** Smart / Container components, screens, widgets, services, stores.
+- **251–500 lines (Yellow Zone / Warning Threshold):** Linter warning (`WARN`). Mandatory refactoring & decomposition signal.
+- **> 500 lines (Red Zone / Emergency Hard Ceiling):** Critical blocker (`CRITICAL`). Hard ceiling violation in CI & pre-commit.
 
 ### Self-Correction Rule
 
-- If a `.tsx` file approaches **300 lines** → **WARNING — Tech Debt**. Proactively apply the 3 decomposition rules:
+- If a file exceeds **250 lines** → **WARNING — File Size Threshold Exceeded**. Proactively apply the 3 decomposition rules:
   1. Extract state & effects into `hooks/use<Feature>.ts` (cuts 30-50% volume).
   2. Evict pure helpers and static configs to `utils.ts`, `constants.ts`, `types.ts`.
   3. Isolate heavy JSX blocks (> 40-50 lines) into sub-components (`FeatureHeader.tsx`, `FeatureFilter.tsx`).
-- If a file exceeds **500 clean lines** → **CRITICAL — Hard Ceiling Violation**. Code must be blocked until decomposed.
+- If a file exceeds **500 lines** → **CRITICAL — Hard Ceiling Violation**. Code must be blocked until decomposed.
 
 ---
 

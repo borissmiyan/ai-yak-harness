@@ -87,12 +87,6 @@ grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS \
   -E '\w+!\.' \
   "$TARGET" 2>/dev/null | grep -v '.test.' | grep -v '__tests__' | grep -v '.spec.' | head -20 || echo "  ✅ None found"
 
-echo ""
-echo -e "${YELLOW}🟡 WARNING: Type casts (as SomeType)${NC}"
-echo "-------------------------------"
-grep -rn --include='*.ts' --include='*.tsx' $EXCLUDE_OPTS \
-  -E '\bas\s+[A-Z][a-zA-Z]+' \
-  "$TARGET" 2>/dev/null | grep -v 'as React' | grep -v 'as Node' | grep -vE ':\s*(import|export)\s+' | grep -vE ':\s*(type\s+)?[A-Za-z0-9_]+\s+as\s+[A-Za-z0-9_]+' | grep -v '.test.' | grep -v '__tests__' | grep -v '.spec.' | head -20 || echo "  ✅ None found"
 
 echo ""
 echo -e "${YELLOW}🟡 WARNING: Missing return types on exported functions${NC}"

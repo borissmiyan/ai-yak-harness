@@ -32,9 +32,27 @@ echo " Target: $TARGET"
 echo "=============================="
 
 EXCLUDE_OPTS="--exclude-dir=.agent --exclude-dir=.agents --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=build --exclude-dir=.git --exclude-dir=backups --exclude-dir=scratch --exclude-dir=graphify-out --exclude-dir=e2e"
+FIND_COMMON_EXCLUDES=(
+  ! -path '*/.agent/*'
+  ! -path '*/.agents/*'
+  ! -path '*/node_modules/*'
+  ! -path '*/dist/*'
+  ! -path '*/build/*'
+  ! -path '*/.git/*'
+  ! -path '*/backups/*'
+  ! -path '*/scratch/*'
+  ! -path '*/graphify-out/*'
+  ! -path '*/e2e/*'
+  ! -path '*/locales/*'
+  ! -path '*/data/*'
+  ! -name '*.test.*'
+  ! -name '*.spec.*'
+  ! -name '*.d.ts'
+)
 if [ -n "${AUDIT_EXTRA_EXCLUDES:-}" ]; then
   for extra_dir in $AUDIT_EXTRA_EXCLUDES; do
     EXCLUDE_OPTS="$EXCLUDE_OPTS --exclude-dir=$extra_dir"
+    FIND_COMMON_EXCLUDES+=(! -path "*/$extra_dir/*")
   done
 fi
 
@@ -209,12 +227,27 @@ log_finding "Ad-hoc Hex Colors" "$RES"
 
 # ──────────────────────────────────────────────
 echo ""
-echo -e "${RED}🔴 CRITICAL: File Size Limit Exceeded (> 500 lines)${NC}"
+echo -e "${RED}🔴 CRITICAL: File Size Hard Limit Exceeded (> 500 lines)${NC}"
 echo "-------------------------------"
-RES=$(find "$TARGET" -type f \( -name "*.ts" -o -name "*.tsx" \) ! -path '*/.agent/*' ! -path '*/.agents/*' ! -path '*/node_modules/*' ! -path '*/dist/*' ! -path '*/build/*' ! -path '*/.git/*' ! -path '*/backups/*' ! -path '*/scratch/*' ! -path '*/graphify-out/*' ! -name '*.test.*' -print0 2>/dev/null \
-  | xargs -0 wc -l 2>/dev/null | awk '$1 > 500 && $2 != "total" {print $2 ": " $1 " lines"}' | head -10 || true)
+RES=$(find "$TARGET" -type f \( -name "*.ts" -o -name "*.tsx" \) \
+  "${FIND_COMMON_EXCLUDES[@]}" \
+  -print0 2>/dev/null \
+  | xargs -0 wc -l 2>/dev/null \
+  | awk '$1 > 500 && $2 != "total" {print $2 ":1: File length exceeds hard limit of 500 lines (" $1 " lines)"}' || true)
 print_or_ok "$RES" "✅ All files are under 500 lines."
-log_finding "File Size Violations" "$RES"
+log_finding "File Size Hard Limit Violations (> 500 lines)" "$RES"
+
+# ──────────────────────────────────────────────
+echo ""
+echo -e "${YELLOW}🟡 WARNING: File Size Threshold Exceeded (> 250 lines)${NC}"
+echo "-------------------------------"
+RES=$(find "$TARGET" -type f \( -name "*.ts" -o -name "*.tsx" \) \
+  "${FIND_COMMON_EXCLUDES[@]}" \
+  -print0 2>/dev/null \
+  | xargs -0 wc -l 2>/dev/null \
+  | awk '$1 > 250 && $1 <= 500 && $2 != "total" {print $2 ":1: File length exceeds threshold of 250 lines (" $1 " lines)"}' || true)
+print_or_ok "$RES" "✅ All files are under 250 lines."
+log_finding "File Size Threshold Violations (251-500 lines)" "$RES"
 
 # ──────────────────────────────────────────────
 echo ""
@@ -236,7 +269,7 @@ log_finding "Direct Object Mutation in Stores" "$RES"
 echo ""
 echo -e "${RED}🔴 CRITICAL: Unmemoized Context Provider Value${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS -E '<.*\.Provider\s+value=\{\s*\{' "$TARGET" 2>/dev/null | grep -v '\.test\.' | grep -v '__tests__' || true)
+RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS -E '<.*\.Provider\s+value=\{\s*\{' "$TARGET" 2>/dev/null || true)
 print_or_ok "$RES" "✅ Context providers seem to use memoized values"
 log_finding "Unmemoized Context Provider" "$RES"
 
@@ -353,7 +386,7 @@ log_finding "Form State Overuse" "$RES"
 echo ""
 echo -e "${YELLOW}🟡 WARNING: Non-Standard Border Radii (rounded-md/lg)${NC}"
 echo "-------------------------------"
-RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS "rounded-md\|rounded-lg" "$TARGET" 2>/dev/null | head -10 || true)
+RES=$(grep -rn --include='*.tsx' $EXCLUDE_OPTS "rounded-md\|rounded-lg" "$TARGET" 2>/dev/null | grep -v '.test.' | head -10 || true)
 print_or_ok "$RES" "✅ Border radii follow design system."
 log_finding "Non-Standard Border Radii" "$RES"
 

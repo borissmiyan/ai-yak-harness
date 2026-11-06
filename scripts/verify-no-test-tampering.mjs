@@ -49,9 +49,10 @@ function verifyHarnessIntegrity() {
             }
             const scripts = pkg.scripts || {};
 
+            const linter = (pkg.devDependencies?.oxlint || pkg.dependencies?.oxlint) ? 'oxlint' : 'eslint';
             const requiredSnippets = [
                 { name: 'check', snippet: 'tsc', desc: 'Typecheck (tsc)' },
-                { name: 'check', snippet: 'eslint', desc: 'Linter (eslint)' },
+                { name: 'check', snippet: linter, desc: `Linter (${linter})` },
                 { name: 'prepare', snippet: 'husky', desc: 'Husky git hooks' },
             ];
 

@@ -171,15 +171,15 @@ if (designAiDocPath) {
     const designAiContent = fs.readFileSync(designAiDocPath, 'utf-8');
     const hexMatches = designAiContent.match(/#[0-9a-fA-F]{6}\b/g) || [];
     if (hexMatches.length >= 2) {
-        // Проверяем первый темный фон и первый светлый цвет текста
+        // Проверяем самый темный цвет текста и самый светлый цвет фона
         const darkColors = hexMatches.filter(h => {
             const rgb = hexToRgb(h);
             return rgb && getRelativeLuminance(rgb) < 0.2;
-        });
+        }).sort((a, b) => getRelativeLuminance(hexToRgb(a)) - getRelativeLuminance(hexToRgb(b)));
         const lightColors = hexMatches.filter(h => {
             const rgb = hexToRgb(h);
             return rgb && getRelativeLuminance(rgb) > 0.4;
-        });
+        }).sort((a, b) => getRelativeLuminance(hexToRgb(b)) - getRelativeLuminance(hexToRgb(a)));
 
         if (darkColors.length > 0 && lightColors.length > 0) {
             const bgRgb = hexToRgb(darkColors[0]);

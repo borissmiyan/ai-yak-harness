@@ -107,7 +107,9 @@ async function main() {
 
     if (!targetRun) {
         console.error(`\n❌ Ошибка: Запуск CI Quality Gate для коммита ${shortSha} не найден в течение 90 секунд.`);
-        console.error('Проверьте подключение к GitHub или статус https://github.com/borissmiyan/ai-yak-harness/actions');
+        const rawRemote = runCommand('git remote get-url origin') || 'https://github.com/borissmiyan/ai-yak-harness';
+        const actionsUrl = rawRemote.replace(/\.git$/, '').replace(/^git@github\.com:/, 'https://github.com/') + '/actions';
+        console.error(`Проверьте подключение к GitHub или статус ${actionsUrl}`);
         process.exit(1);
     }
 

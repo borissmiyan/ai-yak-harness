@@ -169,12 +169,20 @@ export function installOrUpdateProject(targetDir) {
         console.log(`  🪝 ${isUpdate ? 'Обновлены' : 'Установлены'} Git-хуки: .husky/ (${count} файлов, режим fail-closed)`);
     }
 
-    // 5. GitHub Actions Workflow — всегда обновляется
+    // 5. GitHub Actions Workflow — всегда обновляется (с сохранением custom jobs, таких как deploy)
     const ciSrc = path.join(__dirname, 'ci', 'ci-quality-gate.yml');
     const ciDest = path.join(resolvedTarget, '.github', 'workflows', 'ci-quality-gate.yml');
     if (fs.existsSync(ciSrc)) {
         fs.mkdirSync(path.dirname(ciDest), { recursive: true });
-        fs.copyFileSync(ciSrc, ciDest);
+        let ciContent = fs.readFileSync(ciSrc, 'utf-8');
+        if (fs.existsSync(ciDest)) {
+            const existingCi = fs.readFileSync(ciDest, 'utf-8');
+            const deployMatch = existingCi.match(/\n  deploy:[\s\S]*$/);
+            if (deployMatch && !ciContent.includes('deploy:')) {
+                ciContent = ciContent.trimEnd() + '\n' + deployMatch[0];
+            }
+        }
+        fs.writeFileSync(ciDest, ciContent, 'utf-8');
         modifiedElements++;
         console.log(`  🤖 ${isUpdate ? 'Обновлен' : 'Установлен'} CI Quality Gate: .github/workflows/ci-quality-gate.yml`);
     }
@@ -322,6 +330,8 @@ export function installOrUpdateProject(targetDir) {
         'check:types': 'tsc -b || tsc --noEmit',
         'check:circular': 'node scripts/verify-no-circular.mjs',
         'check:hygiene': 'node scripts/verify-resource-hygiene.mjs',
+        'check:esm': 'node scripts/verify-esm-and-path-hygiene.mjs',
+        'check:smoke': 'node scripts/verify-electron-smoke.mjs',
         'check:memo': 'node scripts/verify-memoization.mjs',
         'check:design': 'node scripts/verify-design-system.mjs',
         'check:security:antipatterns': 'node scripts/verify-security-antipatterns.mjs',

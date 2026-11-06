@@ -171,7 +171,7 @@ echo -e "${YELLOW}🟡 WARNING: Possibly background-mounted modal (no conditiona
 echo "-------------------------------"
 while IFS= read -r f; do
   if grep -qE "(hidden|opacity-0|display:\s*none)" "$f" 2>/dev/null; then
-    if ! grep -qE "\{\s*\w+\s*&&\s*<|\?\s*<\w+.*:\s*null" "$f" 2>/dev/null; then
+    if ! grep -qE "\{\s*\w+\s*&&\s*(\(|<)|\?\s*<\w+.*:\s*null" "$f" 2>/dev/null; then
       echo "  ⚠️  $f — CSS-visibility toggle found with no conditional (&&/ternary-to-null) mount pattern nearby"
     fi
   fi

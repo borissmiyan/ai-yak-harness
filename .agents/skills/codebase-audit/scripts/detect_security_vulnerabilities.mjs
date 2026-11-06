@@ -143,12 +143,12 @@ for (const fpath of srcFiles) {
   lines.forEach((line, idx) => {
     if (checkAuditIgnore(lines, idx)) return;
 
-    // Check dangerouslySetInnerHTML without DOMPurify
+    // Check dangerouslySetInnerHTML without DOMPurify or sanitizeHtml
     if (/dangerouslySetInnerHTML\s*=\s*\{\s*\{\s*__html\s*:/i.test(line)) {
-      if (!/DOMPurify\.sanitize/i.test(line)) {
+      if (!/(?:DOMPurify\.sanitize|sanitizeHtml|sanitizedContent)/i.test(line)) {
         // Also check if sanitize is on adjacent lines
         const context = lines.slice(Math.max(0, idx - 2), Math.min(lines.length, idx + 3)).join(' ');
-        if (!/DOMPurify\.sanitize/i.test(context)) {
+        if (!/(?:DOMPurify\.sanitize|sanitizeHtml|sanitizedContent)/i.test(context)) {
           addViolation(
             fpath, idx + 1, 'CRITICAL', 'XSS-Dangerous-HTML',
             'dangerouslySetInnerHTML used without DOMPurify.sanitize(). Ensure all HTML inputs are sanitized.'

@@ -56,7 +56,7 @@ Before touching any code, anchor the audit in the project's own decisions and us
 Extract:
 
 - Hard safety guardrails (NEVER violate these during fix suggestions).
-- Code quality rules (500-line limit, no `any`, mandatory comments).
+- Code quality rules (500-line hard ceiling, 250-line warning threshold, no `any`, mandatory comments).
 - UX preferences (rounding, modal-first, SSOT, etc.).
 - Communication expectations (diffs, educational explanations, empirical verification).
 
@@ -361,7 +361,7 @@ Never tell the user "everything is fixed" unless `status.md` says CLEAN.
 1. **NEVER skip reading reference files.** The whole point is stack-specific depth. Generic advice = audit failure.
 2. **NEVER mark something as "fine" without verifying** against the specific constraints in the reference file.
 3. **ALWAYS provide BAD→GOOD code examples** for every issue found. No vague descriptions.
-4. **ALWAYS check files for the 500-line limit** per the workspace rules.
+4. **ALWAYS check files for the line limits (250 warning threshold, 500 hard ceiling)** per the workspace rules.
 5. **ALWAYS verify `any` is not used** — substitute with `unknown`, `Record<string, unknown>`, or proper types. Prefer the Step 0.5 `tsc`/strict-mode check over the regex grep for this — it also catches *implicit* any, which grep cannot.
 6. **ALWAYS check for AI-slop patterns** — `JSON.stringify` comparisons, `useEffect` that only sets state, `as unknown as` casts, and copy-pasted object construction. Read `references/ai_slop_patterns.md` for every audit.
 7. **NEVER treat a clean regex-script result as proof of absence.** These scripts match single-line shapes only. State findings as "not found by pattern X" rather than "confirmed absent" unless corroborated by an AST tool (Step 0.5) or a full manual read (Step 3).
