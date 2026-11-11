@@ -52,6 +52,9 @@ jobs:
       - name: 📏 Verify TSX Component Size Budget (150-250 lines)
         run: node scripts/verify-component-budget.mjs
 
+      - name: 🔒 Verify Supabase Compliance & SQL Performance
+        run: node scripts/verify-supabase-compliance.mjs
+
       - name: 🛡️ Run Unified Quality Check (Types + Lint + Tests)
         run: npm run check
 

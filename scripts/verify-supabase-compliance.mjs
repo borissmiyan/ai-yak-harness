@@ -176,6 +176,171 @@ export function validateRlsPerformance(sqlContent, filePath = '') {
 }
 
 /**
+ * Извлекает все объявленные функциональные индексы из SQL
+ */
+export function extractFunctionalIndexes(sql) {
+    const indexes = new Set();
+    const cleaned = cleanSql(sql);
+    const onRegex = /CREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:["']?\w+["']?\s+)?ON\s+(?:(?:public|"public")\.)?([a-zA-Z0-9_]+)(?:\s+USING\s+[a-zA-Z0-9_]+)?\s*\(/gi;
+    let match;
+    while ((match = onRegex.exec(cleaned)) !== null) {
+        const table = match[1].toLowerCase();
+        const startIndex = onRegex.lastIndex;
+        let depth = 1;
+        let idx = startIndex;
+        while (idx < cleaned.length && depth > 0) {
+            if (cleaned[idx] === '(') depth++;
+            else if (cleaned[idx] === ')') depth--;
+            idx++;
+        }
+        if (depth === 0) {
+            const rawExpr = cleaned.substring(startIndex, idx - 1).trim();
+            if (rawExpr.includes('(')) {
+                const normalized = rawExpr.toLowerCase().replace(/\s+/g, '');
+                indexes.add(`${table}:${normalized}`);
+                indexes.add(normalized);
+                const stripped = normalized.replace(/coalesce\(([^,]+),[^)]*\)/g, '$1');
+                indexes.add(`${table}:${stripped}`);
+                indexes.add(stripped);
+            }
+        }
+    }
+    return indexes;
+}
+
+/**
+ * 5. Проверка наличия функциональных индексов для выражений в WHERE (UPPER, LOWER, TRIM)
+ * Предотвращает Sequential Scan по таблицам и таймауты PostgREST (57014).
+ */
+export function validateFunctionalIndexes(sqlContent, filePath = '', existingSchema = '') {
+    const violations = [];
+    if (sqlContent.includes('@supabase-compliance-ignore: functional-index') || 
+        sqlContent.includes('@supabase-compliance-ignore: all')) {
+        return violations;
+    }
+
+    const declaredIndexes = extractFunctionalIndexes(sqlContent + '\n' + existingSchema);
+    const cleaned = cleanSql(sqlContent);
+
+    const tableWhereRegex = /(?:FROM|UPDATE|DELETE\s+FROM)\s+(?:(?:public|"public")\.)?([a-zA-Z0-9_]+)(?:\s+(?:AS\s+)?([a-zA-Z0-9_]+))?[^;]*?\bWHERE\b([\s\S]*?)(?:;|\bLIMIT\b|\bGROUP\b|\bORDER\b|\bRETURN\b|\$\$|\bLOOP\b)/gi;
+    let match;
+    while ((match = tableWhereRegex.exec(cleaned)) !== null) {
+        const tableName = match[1].toLowerCase();
+        const tableAlias = match[2]?.toLowerCase();
+        const whereClause = match[3];
+
+        if (whereClause.includes('@supabase-compliance-ignore: functional-index')) {
+            continue;
+        }
+
+        const funcCallRegex = /\b(UPPER|LOWER)\s*\(/gi;
+        let funcMatch;
+        while ((funcMatch = funcCallRegex.exec(whereClause)) !== null) {
+            const funcName = funcMatch[1].toUpperCase();
+            const startIndex = funcCallRegex.lastIndex;
+            let depth = 1;
+            let idx = startIndex;
+            while (idx < whereClause.length && depth > 0) {
+                if (whereClause[idx] === '(') depth++;
+                else if (whereClause[idx] === ')') depth--;
+                idx++;
+            }
+            if (depth === 0) {
+                const innerArgs = whereClause.substring(startIndex, idx - 1).trim();
+                const lowerInner = innerArgs.toLowerCase();
+
+                if (
+                    !innerArgs ||
+                    innerArgs.startsWith("'") ||
+                    innerArgs.startsWith('"') ||
+                    /^\d+$/.test(innerArgs) ||
+                    lowerInner.startsWith('v_') ||
+                    lowerInner.startsWith('p_') ||
+                    lowerInner.startsWith('new.') ||
+                    lowerInner.startsWith('old.') ||
+                    lowerInner.startsWith('coalesce(v_') ||
+                    lowerInner.startsWith('coalesce(p_') ||
+                    lowerInner.startsWith('trim(v_') ||
+                    lowerInner.startsWith('trim(p_')
+                ) {
+                    continue;
+                }
+
+                const fullExpr = `${funcName}(${innerArgs})`;
+                let cleanInner = innerArgs;
+                if (tableAlias) {
+                    cleanInner = cleanInner.replace(new RegExp(`\\b${tableAlias}\\.`, 'gi'), '');
+                }
+                cleanInner = cleanInner.replace(new RegExp(`\\b${tableName}\\.`, 'gi'), '');
+                const normalizedExpr = `${funcName}(${cleanInner})`.toLowerCase().replace(/\s+/g, '');
+                const tableKey = `${tableName}:${normalizedExpr}`;
+                const strippedCoalesce = normalizedExpr.replace(/coalesce\(([^,]+),[^)]*\)/g, '$1');
+                const strippedKey = `${tableName}:${strippedCoalesce}`;
+
+                const hasIndex = declaredIndexes.has(tableKey) || 
+                                 declaredIndexes.has(normalizedExpr) ||
+                                 declaredIndexes.has(strippedKey) ||
+                                 declaredIndexes.has(strippedCoalesce);
+
+                if (!hasIndex) {
+                    violations.push({
+                        file: filePath,
+                        table: tableName,
+                        expression: fullExpr,
+                        rule: 'EXPRESSION_INDEX_MISSING',
+                        message: `Запрос к таблице '${tableName}' использует выражение '${fullExpr}' в блоке WHERE без функционального индекса. Это вызывает полный перебор таблицы (Sequential Scan) и таймауты (error 57014) на больших объемах данных. Создайте функциональный индекс: CREATE INDEX idx_${tableName}_expr ON ${tableName} (${fullExpr});`
+                    });
+                }
+            }
+        }
+    }
+
+    return violations;
+}
+
+/**
+ * 6. Проверка запросов внутри циклов PL/pgSQL функций (N+1 Loop Query Detection)
+ * Предотвращает зависания при пакетной обработке (импорте Excel и синхронизации).
+ */
+export function validateBatchLoops(sqlContent, filePath = '') {
+    const violations = [];
+    if (sqlContent.includes('@supabase-compliance-ignore: loop-query') || sqlContent.includes('@supabase-compliance-ignore: all')) {
+        return violations;
+    }
+
+    const cleaned = cleanSql(sqlContent);
+    const loopRegex = /\bFOR\s+([a-zA-Z0-9_]+)\s+IN\s+[^;]+?LOOP([\s\S]*?)END\s+LOOP;/gi;
+    let match;
+    while ((match = loopRegex.exec(cleaned)) !== null) {
+        const loopVar = match[1];
+        const loopBody = match[2];
+
+        if (loopBody.includes('@supabase-compliance-ignore: loop-query')) {
+            continue;
+        }
+
+        const selectRegex = /SELECT\s+[\s\S]*?\s+FROM\s+(?:(?:public|"public")\.)?(parcels|clients|orders|transactions)\b([\s\S]*?)(?:;|\bLOOP\b)/gi;
+        let selectMatch;
+        while ((selectMatch = selectRegex.exec(loopBody)) !== null) {
+            const table = selectMatch[1].toLowerCase();
+            const restOfQuery = selectMatch[2];
+
+            const hasLimit1 = /\bLIMIT\s+1\b/i.test(restOfQuery);
+            if (!hasLimit1) {
+                violations.push({
+                    file: filePath,
+                    table,
+                    loopVariable: loopVar,
+                    rule: 'LOOP_N_PLUS_ONE_UNBOUNDED',
+                    message: `Таблица '${table}' опрашивается внутри цикла FOR ${loopVar} IN ... LOOP без 'LIMIT 1'. Неограниченные выборки внутри циклов по объемным таблицам приводят к N+1 нагрузке и таймауту (57014). Добавьте LIMIT 1 или переведите логику на массовый JOIN/ANY.`
+                });
+            }
+        }
+    }
+    return violations;
+}
+
+/**
  * Основная функция проверки соответствия Supabase
  */
 export function verifySupabaseCompliance(options = {}) {
@@ -209,6 +374,12 @@ export function verifySupabaseCompliance(options = {}) {
     }
 
     const allViolations = [];
+    const migDir = path.join(ROOT_DIR, 'supabase', 'migrations');
+    let fullSchemaSql = '';
+    if (fs.existsSync(migDir)) {
+        const allFiles = fs.readdirSync(migDir).filter(f => f.endsWith('.sql'));
+        fullSchemaSql = allFiles.map(f => fs.readFileSync(path.join(migDir, f), 'utf8')).join('\n');
+    }
 
     for (const sqlFile of sqlFiles) {
         const fullPath = path.resolve(ROOT_DIR, sqlFile);
@@ -219,6 +390,8 @@ export function verifySupabaseCompliance(options = {}) {
         allViolations.push(...validateSearchPath(content, sqlFile));
         allViolations.push(...validateAnonExecPrivileges(content, sqlFile));
         allViolations.push(...validateRlsPerformance(content, sqlFile));
+        allViolations.push(...validateFunctionalIndexes(content, sqlFile, fullSchemaSql));
+        allViolations.push(...validateBatchLoops(content, sqlFile));
     }
 
     if (allViolations.length > 0) {

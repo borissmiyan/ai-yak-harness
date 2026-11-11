@@ -3,7 +3,10 @@ import {
     validateMigrationRls,
     validateSearchPath,
     validateAnonExecPrivileges,
-    validateRlsPerformance
+    validateRlsPerformance,
+    validateFunctionalIndexes,
+    validateBatchLoops,
+    extractFunctionalIndexes
 } from '../verify-supabase-compliance.mjs';
 
 describe('Supabase Compliance & Security Shield', () => {
@@ -126,6 +129,80 @@ describe('Supabase Compliance & Security Shield', () => {
                 USING (user_id = (select auth.uid()));
             `;
             const violations = validateRlsPerformance(sql, 'migration_test.sql');
+            expect(violations).toHaveLength(0);
+        });
+    });
+
+    describe('validateFunctionalIndexes', () => {
+        it('detects unindexed expression in WHERE clause (Sequential Scan hazard)', () => {
+            const badSql = `
+                SELECT id FROM public.parcels WHERE UPPER(TRIM(tracking_number)) = v_tracking LIMIT 1;
+            `;
+            const violations = validateFunctionalIndexes(badSql, 'migration_test.sql');
+            expect(violations).toHaveLength(1);
+            expect(violations[0].rule).toBe('EXPRESSION_INDEX_MISSING');
+            expect(violations[0].table).toBe('parcels');
+            expect(violations[0].expression).toBe('UPPER(TRIM(tracking_number))');
+        });
+
+        it('passes when functional index is declared in same migration or schema', () => {
+            const goodSql = `
+                CREATE INDEX idx_parcels_upper_trim_tracking ON public.parcels (UPPER(TRIM(tracking_number)));
+                SELECT id FROM public.parcels WHERE UPPER(TRIM(tracking_number)) = v_tracking LIMIT 1;
+            `;
+            const violations = validateFunctionalIndexes(goodSql, 'migration_test.sql');
+            expect(violations).toHaveLength(0);
+        });
+
+        it('ignores PL/pgSQL scalar variables in expressions (v_*, p_*)', () => {
+            const sql = `
+                SELECT id FROM public.clients WHERE client_code = UPPER(TRIM(v_clean_code)) LIMIT 1;
+            `;
+            const violations = validateFunctionalIndexes(sql, 'migration_test.sql');
+            expect(violations).toHaveLength(0);
+        });
+
+        it('honors @supabase-compliance-ignore directive', () => {
+            const ignoredSql = `
+                -- @supabase-compliance-ignore: functional-index
+                SELECT id FROM public.parcels WHERE UPPER(description) = 'BOX';
+            `;
+            const violations = validateFunctionalIndexes(ignoredSql, 'migration_test.sql');
+            expect(violations).toHaveLength(0);
+        });
+    });
+
+    describe('validateBatchLoops', () => {
+        it('detects unbounded SELECT on heavy table inside FOR ... LOOP', () => {
+            const badLoopSql = `
+                FOR v_item IN SELECT * FROM batch_items LOOP
+                    SELECT * FROM public.parcels WHERE code = v_item.code;
+                END LOOP;
+            `;
+            const violations = validateBatchLoops(badLoopSql, 'migration_test.sql');
+            expect(violations).toHaveLength(1);
+            expect(violations[0].rule).toBe('LOOP_N_PLUS_ONE_UNBOUNDED');
+            expect(violations[0].table).toBe('parcels');
+        });
+
+        it('passes when loop query has LIMIT 1', () => {
+            const goodLoopSql = `
+                FOR v_item IN SELECT * FROM batch_items LOOP
+                    SELECT id INTO v_id FROM public.parcels WHERE code = v_item.code LIMIT 1;
+                END LOOP;
+            `;
+            const violations = validateBatchLoops(goodLoopSql, 'migration_test.sql');
+            expect(violations).toHaveLength(0);
+        });
+
+        it('honors loop-query ignore directive', () => {
+            const ignoredLoopSql = `
+                -- @supabase-compliance-ignore: loop-query
+                FOR v_item IN SELECT * FROM batch_items LOOP
+                    SELECT * FROM public.parcels WHERE code = v_item.code;
+                END LOOP;
+            `;
+            const violations = validateBatchLoops(ignoredLoopSql, 'migration_test.sql');
             expect(violations).toHaveLength(0);
         });
     });

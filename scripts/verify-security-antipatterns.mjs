@@ -185,6 +185,31 @@ export function checkBotHardcodedTokens(content, filePath = '') {
     return violations;
 }
 
+export function checkRawErrorLeaks(content, filePath = '') {
+    if (content.includes('@security-gate-ignore')) return [];
+    const violations = [];
+
+    // Блокируем прямую передачу сырого err.message или error.message в alert()
+    const alertRawErrorRegex = /\b(?:window\.)?alert\s*\(\s*(?:err|error|e)\.message\s*\)/i;
+    if (alertRawErrorRegex.test(content)) {
+        violations.push({
+            file: filePath,
+            message: 'Raw error leak: Direct alert(error.message) exposes internal server errors/stack traces to end-users. Use sanitized user messages and log technical details via errorLoggingService.'
+        });
+    }
+
+    // Блокируем сырой PostgREST/SQL код в UI алерты
+    const rawPostgrestLeakRegex = /\b(?:alert|showTelegramAlert|toast\.error)\s*\(\s*['"][^'"]*?(?:PostgREST|57014|PGRST|statement timeout)[^'"]*?['"]\s*\)/i;
+    if (rawPostgrestLeakRegex.test(content)) {
+        violations.push({
+            file: filePath,
+            message: 'Raw SQL/PostgREST error in UI alert: Hardcoded database error messages detected in user interface notification.'
+        });
+    }
+
+    return violations;
+}
+
 function getAllFiles(dir, extensions) {
     const files = [];
     if (!fs.existsSync(dir)) return files;
@@ -254,6 +279,7 @@ export function verifySecurityAntipatterns() {
         violations.push(...checkHardcodedSecretFallbacks(content, relPath));
         violations.push(...checkTmaInitDataBypass(content, relPath));
         violations.push(...checkBotHardcodedTokens(content, relPath));
+        violations.push(...checkRawErrorLeaks(content, relPath));
     }
 
     if (violations.length > 0) {

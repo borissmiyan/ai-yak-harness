@@ -88,3 +88,13 @@
    - **Path Geometry & Bundle Depth:** Запрещены слепые относительные переходы `path.join(__dirname, '../../...')` в серверных/Electron-модулях без валидации `fs.existsSync` или использования `app.getAppPath()`, так как глубина директории после бандлинга (`dist/`, `dist-electron/`) смещается относительно исходников.
    - **Network Endpoint Fallback Hygiene:** Запрещено хардкодить `http://localhost:<port>` в UI-компонентах без строгой изоляции окружения (`isRemote`) во избежание `ERR_CONNECTION_REFUSED`.
    - **Artifact Pre-Flight & Smoke Gate:** В десктопных приложениях сборка обязана верифицироваться гейтом `npm run check:smoke` (`scripts/verify-electron-smoke.mjs`), подтверждающим синтаксическую валидность `preload.cjs`, главного процесса и целостность встроенных ассетов.
+
+14. **BATCH PUSH PROTOCOL & FAST FEEDBACK DOCTRINE:**
+   - **Защита от очередей CI:** Запрещено пушить каждый микро-коммит или промежуточный файл по отдельности. Это перегружает раннеры GitHub Actions и растягивает итерации на 20–30 минут.
+   - **Локальные коммиты пакетом:** Все микро-шаги TDD выполняются и коммитятся локально (проверка pre-commit занимает 10–15 секунд).
+   - **Единый пуш и верификация:** Команда отправки в удаленный репозиторий (`npm run push:verify` или `git push && npm run verify:remote`) выполняется **СТРОГО ОДИН РАЗ в самом финале всей задачи**, отправляя всю пачку коммитов за один прогон CI (~2–3 минуты).
+
+15. **STARTING GUIDE & PROJECT BOOTSTRAP KICKOFF DOCTRINE:**
+   - Любой новый проект в экосистеме AI Yak Harness обязан инициализироваться через интерактивный мастер `.agents/skills/starting-guide/SKILL.md`.
+   - Проект обязан последовательно пройти 6 фаз Kickoff (Product DNA -> Git Repo & CI/CD -> Database & Backend -> Hosting & Storage -> Frontend & Design -> AI Harness Injection).
+   - При необходимости ручных действий со стороны человека (создание аккаунтов, ввод биллинга, получение API-ключей в сторонних дашбордах) агент обязан следовать протоколу **Human Action Handoff** с предоставлением четкой инструкции и шаблона для вставки секретов.

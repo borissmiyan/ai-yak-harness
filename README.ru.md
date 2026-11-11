@@ -188,6 +188,7 @@ npm run prepare
 | `verification-before-completion` | Жесткий протокол: запрет отчета о готовности без реальных доказательств с 0 ошибок. |
 | `test-driven-development` | Классический цикл Red-Green-Refactor для минимизации багов и соблюдения инвариантов. |
 | `design-system-creator` | Автоматическое ведение и актуализация реестров дизайн-системы и компонентов. |
+| `starting-guide` | Интерактивный мастер запуска и проектирования нового проекта (Project Kickoff & Infra Setup Wizard). 6 фаз Kickoff + протокол передачи действий человеку (Human Action Handoff). |
 
 ### 7. Реестры документации и дизайн-системы (`templates/docs/`)
 

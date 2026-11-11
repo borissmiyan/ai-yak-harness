@@ -8,7 +8,8 @@ import {
     checkTmaBotSecretExposure,
     checkTmaInitDataBypass,
     checkWranglerVarsSecrets,
-    checkBotHardcodedTokens
+    checkBotHardcodedTokens,
+    checkRawErrorLeaks
 } from '../verify-security-antipatterns.mjs';
 
 describe('verify-security-antipatterns gate', () => {
@@ -195,6 +196,50 @@ describe('verify-security-antipatterns gate', () => {
         it('passes when Bot is initialized with variable', () => {
             const goodCode = "const bot = new Bot(process.env.BOT_TOKEN);";
             const violations = checkBotHardcodedTokens(goodCode, 'src/bot/index.ts');
+            expect(violations.length).toBe(0);
+        });
+    });
+
+    describe('checkRawErrorLeaks', () => {
+        it('detects direct alert(error.message) leaking internal errors to users', () => {
+            const badCode = `
+                try {
+                    await sendData();
+                } catch (err) {
+                    alert(err.message);
+                }
+            `;
+            const violations = checkRawErrorLeaks(badCode, 'src/features/bad.tsx');
+            expect(violations.length).toBeGreaterThan(0);
+            expect(violations[0].message).toContain('Raw error leak: Direct alert(error.message)');
+        });
+
+        it('detects raw PostgREST statement timeout errors in UI notifications', () => {
+            const badCode = "showTelegramAlert('PostgREST error 57014: statement timeout');";
+            const violations = checkRawErrorLeaks(badCode, 'src/features/bad.tsx');
+            expect(violations.length).toBeGreaterThan(0);
+            expect(violations[0].message).toContain('Raw SQL/PostgREST error in UI alert');
+        });
+
+        it('passes with user-friendly messages and telemetry capture', () => {
+            const goodCode = `
+                try {
+                    await sendData();
+                } catch (err) {
+                    errorLoggingService.captureException(err);
+                    showTelegramAlert('Не удалось сохранить данные. Попробуйте снова.');
+                }
+            `;
+            const violations = checkRawErrorLeaks(goodCode, 'src/features/good.tsx');
+            expect(violations.length).toBe(0);
+        });
+
+        it('honors @security-gate-ignore directive', () => {
+            const ignoredCode = `
+                // @security-gate-ignore: debug tooling only
+                alert(err.message);
+            `;
+            const violations = checkRawErrorLeaks(ignoredCode, 'src/features/ignored.tsx');
             expect(violations.length).toBe(0);
         });
     });
